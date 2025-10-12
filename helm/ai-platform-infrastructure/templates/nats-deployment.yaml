@@ -1,0 +1,80 @@
+{{- if .Values.nats.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-nats
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: nats
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      component: nats
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        component: nats
+    spec:
+      containers:
+      - name: nats
+        image: "{{ .Values.nats.nats.image.registry }}/{{ .Values.nats.nats.image.repository }}:{{ .Values.nats.nats.image.tag }}"
+        imagePullPolicy: {{ .Values.nats.nats.image.pullPolicy }}
+        ports:
+        - containerPort: 4222
+          name: client
+        - containerPort: 8222
+          name: monitoring
+        args:
+        - --http_port
+        - "8222"
+        - --jetstream
+        - --store_dir
+        - /data
+        volumeMounts:
+        - name: nats-data
+          mountPath: /data
+        resources:
+          {{- toYaml .Values.nats.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: monitoring
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: monitoring
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: nats-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-nats
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: nats
+spec:
+  type: ClusterIP
+  ports:
+  - port: 4222
+    targetPort: client
+    protocol: TCP
+    name: client
+  - port: 8222
+    targetPort: monitoring
+    protocol: TCP
+    name: monitoring
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    component: nats
+{{- end }}

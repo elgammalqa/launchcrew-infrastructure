@@ -1,0 +1,108 @@
+{{- if and .Values.simpleServices (and .Values.simpleServices.rabbitmq .Values.simpleServices.rabbitmq.enabled) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-rabbitmq-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: rabbitmq
+spec:
+  accessModes:
+    - {{ .Values.persistence.rabbitmq.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.rabbitmq.size }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-rabbitmq
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      component: rabbitmq
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        component: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: {{ .Values.simpleServices.rabbitmq.image }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.simpleServices.rabbitmq.ports.amqp }}
+          name: amqp
+        - containerPort: {{ .Values.simpleServices.rabbitmq.ports.management }}
+          name: management
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: RABBITMQ_DEFAULT_USER
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: RABBITMQ_DEFAULT_PASS
+        - name: RABBITMQ_ERLANG_COOKIE
+          value: "SWQOKODSQALRPCLNMEQG"
+        resources:
+          {{- toYaml .Values.simpleServices.rabbitmq.resources | nindent 10 }}
+        livenessProbe:
+          tcpSocket:
+            port: amqp
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          tcpSocket:
+            port: amqp
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/rabbitmq
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "ai-platform.fullname" . }}-rabbitmq-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: rabbitmq
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.simpleServices.rabbitmq.ports.amqp }}
+    targetPort: amqp
+    protocol: TCP
+    name: amqp
+  - port: {{ .Values.simpleServices.rabbitmq.ports.management }}
+    targetPort: management
+    protocol: TCP
+    name: management
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    component: rabbitmq
+{{- end }}

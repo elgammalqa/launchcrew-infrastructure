@@ -1,0 +1,104 @@
+# Prometheus Stack Configuration for Development
+prometheus:
+  prometheusSpec:
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    retention: 7d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+    additionalScrapeConfigs:
+      - job_name: 'ai-platform-infrastructure'
+        static_configs:
+          - targets: ['postgresql.ai-platform-infrastructure:5432']
+            labels:
+              service: 'postgresql'
+          - targets: ['redis.ai-platform-infrastructure:6379']
+            labels:
+              service: 'redis'
+          - targets: ['clickhouse.ai-platform-infrastructure:8123']
+            labels:
+              service: 'clickhouse'
+          - targets: ['ai-platform-infra-nats.ai-platform-infrastructure:4222']
+            labels:
+              service: 'nats'
+          - targets: ['ai-platform-infra-influxdb.ai-platform-infrastructure:8181']
+            labels:
+              service: 'influxdb'
+
+grafana:
+  adminPassword: "admin123"
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  persistence:
+    enabled: false  # Use emptyDir for dev
+  defaultDashboardsEnabled: false
+  sidecar:
+    datasources:
+      enabled: false
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://ai-platform-monitoring-kube-prometheus-prometheus:9090
+        access: proxy
+        isDefault: true
+        editable: true
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+# Disable some components for development
+kubeApiServer:
+  enabled: false
+kubelet:
+  enabled: true
+kubeControllerManager:
+  enabled: false
+coreDns:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true

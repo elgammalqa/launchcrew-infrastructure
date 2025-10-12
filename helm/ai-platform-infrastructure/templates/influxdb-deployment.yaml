@@ -1,0 +1,81 @@
+{{- if .Values.influxdb2.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-influxdb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: influxdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      component: influxdb
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        component: influxdb
+    spec:
+      containers:
+      - name: influxdb
+        image: "{{ .Values.influxdb2.image.registry }}/{{ .Values.influxdb2.image.repository }}:{{ .Values.influxdb2.image.tag }}"
+        imagePullPolicy: {{ .Values.influxdb2.image.pullPolicy }}
+        ports:
+        - containerPort: 8086
+          name: http
+        env:
+        - name: DOCKER_INFLUXDB_INIT_MODE
+          value: setup
+        - name: DOCKER_INFLUXDB_INIT_USERNAME
+          value: {{ .Values.influxdb2.auth.admin.username }}
+        - name: DOCKER_INFLUXDB_INIT_PASSWORD
+          value: {{ .Values.influxdb2.auth.admin.password }}
+        - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+          value: {{ .Values.influxdb2.auth.admin.token }}
+        - name: DOCKER_INFLUXDB_INIT_ORG
+          value: ai-platform
+        - name: DOCKER_INFLUXDB_INIT_BUCKET
+          value: default
+        volumeMounts:
+        - name: influxdb-data
+          mountPath: /var/lib/influxdb2
+        resources:
+          {{- toYaml .Values.influxdb2.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: influxdb-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-influxdb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: influxdb
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8086
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    component: influxdb
+{{- end }}

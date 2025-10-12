@@ -1,0 +1,273 @@
+# Production Environment Configuration
+# Optimized for high availability, scalability, and performance
+
+global:
+  namespace: ai-platform-infra
+  imagePullPolicy: IfNotPresent
+  storageClass: "fast-ssd"
+
+# Image pre-pull configuration for production
+imagePull:
+  enabled: true
+  images:
+    - "postgres:16.4"
+    - "redis:7.4"
+    - "rabbitmq:3.13-management"
+    - "nats:2.10.20"
+    - "clickhouse/clickhouse-server:24.8"
+    - "weaviate/weaviate:1.26.1"
+    - "influxdb:2.7"
+
+# PostgreSQL - High Availability with read replicas
+postgresql:
+  enabled: true
+  # CRITICAL: Use official PostgreSQL image
+  image:
+    registry: docker.io
+    repository: postgres
+    tag: "16.4"
+    pullPolicy: IfNotPresent
+  auth:
+    postgresPassword: "CHANGE_ME_PROD_POSTGRES"
+    database: "ai_platform"
+  # High availability architecture
+  architecture: replication
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    # Pod anti-affinity for HA
+    podAntiAffinityPreset: hard
+  # Enable read replicas for production
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 100Gi
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    podAntiAffinityPreset: hard
+  metrics:
+    enabled: true
+  # Enable backup
+  backup:
+    enabled: true
+    cronjob:
+      schedule: "0 2 * * *"
+
+# Redis - Cluster mode with sentinel
+redis:
+  enabled: true
+  # CRITICAL: Use official Redis image
+  image:
+    registry: docker.io
+    repository: redis
+    tag: "7.4"
+    pullPolicy: IfNotPresent
+  auth:
+    enabled: true
+    password: "CHANGE_ME_PROD_REDIS"
+  architecture: replication
+  master:
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    podAntiAffinityPreset: hard
+  replica:
+    replicaCount: 3
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    podAntiAffinityPreset: hard
+  sentinel:
+    enabled: true
+  metrics:
+    enabled: true
+
+# RabbitMQ - Clustered deployment
+rabbitmq:
+  enabled: true
+  # CRITICAL: Use official RabbitMQ image
+  image:
+    registry: docker.io
+    repository: rabbitmq
+    tag: "3.13-management"
+    pullPolicy: IfNotPresent
+  auth:
+    username: "admin"
+    password: "CHANGE_ME_PROD_RABBITMQ"
+  replicaCount: 3
+  clustering:
+    enabled: true
+  persistence:
+    enabled: true
+    size: 20Gi
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  # Pod anti-affinity for HA
+  podAntiAffinityPreset: hard
+  metrics:
+    enabled: true
+  # Enable management plugin
+  plugins: "rabbitmq_management rabbitmq_peer_discovery_k8s"
+
+# NATS - Clustered with JetStream
+nats:
+  enabled: true
+  # CRITICAL: Use official NATS image
+  nats:
+    image:
+      registry: docker.io
+      repository: nats
+      tag: "2.10.20"
+      pullPolicy: IfNotPresent
+  config:
+    jetstream:
+      enabled: true
+      fileStore:
+        pvc:
+          size: 50Gi
+    cluster:
+      enabled: true
+  replicaCount: 3
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "300m"
+    limits:
+      memory: "1Gi"
+      cpu: "600m"
+  # Pod anti-affinity for HA
+  podAntiAffinityPreset: hard
+
+# ClickHouse - Sharded cluster
+clickhouse:
+  enabled: true
+  # CRITICAL: Use official ClickHouse image
+  image:
+    registry: docker.io
+    repository: clickhouse/clickhouse-server
+    tag: "24.8"
+    pullPolicy: IfNotPresent
+  auth:
+    username: "admin"
+    password: "CHANGE_ME_PROD_CLICKHOUSE"
+  shards: 3
+  replicaCount: 2
+  persistence:
+    enabled: true
+    size: 200Gi
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+  # Pod anti-affinity for HA
+  podAntiAffinityPreset: hard
+  metrics:
+    enabled: true
+  # Enable distributed tables
+  distributed:
+    enabled: true
+  # Enable ZooKeeper for clustering
+  zookeeper:
+    enabled: true
+    replicaCount: 3
+
+# Weaviate - Multi-replica with backup
+weaviate:
+  enabled: true
+  # CRITICAL: Use official Weaviate image
+  image:
+    registry: docker.io
+    repository: weaviate/weaviate
+    tag: "1.26.1"
+    pullPolicy: IfNotPresent
+  replicas: 3
+  persistence:
+    enabled: true
+    size: 100Gi
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+  # Pod anti-affinity for HA
+  podAntiAffinityPreset: hard
+  authentication:
+    anonymous_access:
+      enabled: false
+  # Enable backup
+  backup:
+    enabled: true
+    schedule: "0 3 * * *"
+
+# InfluxDB - Clustered deployment
+influxdb2:
+  enabled: true
+  # CRITICAL: Use official InfluxDB image
+  image:
+    registry: docker.io
+    repository: influxdb
+    tag: "2.7"
+    pullPolicy: IfNotPresent
+  auth:
+    admin:
+      username: "admin"
+      password: "CHANGE_ME_PROD_INFLUXDB"
+      token: "CHANGE_ME_PROD_INFLUXDB_TOKEN"
+  architecture: high-availability
+  persistence:
+    enabled: true
+    size: 100Gi
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+  # Pod anti-affinity for HA
+  podAntiAffinityPreset: hard
+  metrics:
+    enabled: true
+  # Enable backup
+  backup:
+    enabled: true
+    cronjob:
+      schedule: "0 1 * * *"

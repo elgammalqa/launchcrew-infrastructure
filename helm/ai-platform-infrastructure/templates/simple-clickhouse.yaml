@@ -1,0 +1,113 @@
+{{- if and .Values.simpleServices (and .Values.simpleServices.clickhouse .Values.simpleServices.clickhouse.enabled) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-clickhouse-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: clickhouse
+spec:
+  accessModes:
+    - {{ .Values.persistence.clickhouse.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.clickhouse.size }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-clickhouse
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: clickhouse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      component: clickhouse
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        component: clickhouse
+    spec:
+      containers:
+      - name: clickhouse
+        image: {{ .Values.simpleServices.clickhouse.image }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.simpleServices.clickhouse.ports.http }}
+          name: http
+        - containerPort: {{ .Values.simpleServices.clickhouse.ports.tcp }}
+          name: tcp
+        env:
+        - name: CLICKHOUSE_DB
+          valueFrom:
+            secretKeyRef:
+              name: clickhouse-secret
+              key: CLICKHOUSE_DB
+        - name: CLICKHOUSE_USER
+          valueFrom:
+            secretKeyRef:
+              name: clickhouse-secret
+              key: CLICKHOUSE_USER
+        - name: CLICKHOUSE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: clickhouse-secret
+              key: CLICKHOUSE_PASSWORD
+        resources:
+          {{- toYaml .Values.simpleServices.clickhouse.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/clickhouse
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "ai-platform.fullname" . }}-clickhouse-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: clickhouse
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.simpleServices.clickhouse.ports.http }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: {{ .Values.simpleServices.clickhouse.ports.tcp }}
+    targetPort: tcp
+    protocol: TCP
+    name: tcp
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    component: clickhouse
+{{- end }}

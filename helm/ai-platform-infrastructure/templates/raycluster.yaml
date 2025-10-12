@@ -1,0 +1,77 @@
+{{- if index .Values "kuberay-operator" "enabled" }}
+---
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: ray-cluster-dev
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: ray
+    app.kubernetes.io/component: cluster
+    app.kubernetes.io/part-of: ai-platform
+spec:
+  # Ray version
+  rayVersion: '2.9.0'
+  
+  # Head node configuration
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+      num-cpus: '1'
+      block: 'true'
+    template:
+      spec:
+        containers:
+        - name: ray-head
+          image: rayproject/ray:2.9.0
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 6379
+            name: gcs
+          - containerPort: 8265
+            name: dashboard
+          - containerPort: 10001
+            name: client
+          resources:
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+          volumeMounts:
+          - name: log-volume
+            mountPath: /tmp/ray
+        volumes:
+        - name: log-volume
+          emptyDir: {}
+  
+  # Worker nodes configuration
+  workerGroupSpecs:
+  - replicas: 1
+    minReplicas: 1
+    maxReplicas: 1
+    groupName: worker-group
+    rayStartParams:
+      num-cpus: '1'
+      block: 'true'
+    template:
+      spec:
+        containers:
+        - name: ray-worker
+          image: rayproject/ray:2.9.0
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+          volumeMounts:
+          - name: log-volume
+            mountPath: /tmp/ray
+        volumes:
+        - name: log-volume
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,69 @@
+# NGINX Ingress Controller - Development Configuration
+# Minimal resources for local development
+
+controller:
+  # Use DaemonSet for better availability
+  kind: Deployment
+  replicaCount: 1
+  
+  # Minimal resource allocation
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  # Service configuration
+  service:
+    type: LoadBalancer
+    # For local development (minikube, kind, colima)
+    # Use NodePort for other local setups
+    # type: NodePort
+    
+  # Ingress class
+  ingressClassResource:
+    name: nginx
+    enabled: true
+    default: true
+  
+  # Metrics
+  metrics:
+    enabled: true
+    service:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "10254"
+  
+  # Admission webhooks (can be disabled for simpler setup)
+  admissionWebhooks:
+    enabled: true
+    
+  # Autoscaling (disabled for dev)
+  autoscaling:
+    enabled: false
+  
+  # Pod annotations
+  podAnnotations: {}
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity
+  affinity: {}
+
+# Default backend (optional - provides a default 404 page)
+defaultBackend:
+  enabled: true
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi

@@ -1,0 +1,294 @@
+# Simplified Development environment values
+# Uses custom templates with simple Docker images - no complex Helm dependencies
+
+global:
+  namespace: ai-platform-infra
+  imagePullPolicy: Always
+  environment: dev
+
+# Override names to make them shorter
+nameOverride: 'ai'
+fullnameOverride: 'ai'
+
+# Ingress configuration
+ingress:
+  enabled: true
+  redis:
+    host: redis.local
+  rabbitmq:
+    host: rabbitmq.local
+  nats:
+    host: nats.local
+  clickhouse:
+    host: clickhouse.local
+  weaviate:
+    host: weaviate.local
+  influxdb:
+    host: influxdb.local
+  registry:
+    host: registry.local
+  ray:
+    host: ray.local
+
+# Secrets configuration for all services
+secrets:
+  postgresql:
+    database: 'ai_platform_dev'
+    username: 'postgres'
+    password: 'postgres-dev-secret-2024'
+
+  redis:
+    password: 'redis-dev-secret-2024'
+
+  rabbitmq:
+    username: 'admin'
+    password: 'rabbitmq-dev-secret-2024'
+
+  clickhouse:
+    database: 'ai_platform_dev'
+    username: 'admin'
+    password: 'clickhouse-dev-secret-2024'
+
+  influxdb:
+    username: 'admin'
+    password: 'influxdb-dev-secret-2024'
+    organization: 'ai-platform'
+    bucket: 'metrics'
+    token: 'influxdb-dev-token-2024'
+
+  weaviate:
+    apiKey: 'weaviate-dev-key-2024'
+
+  registry:
+    httpSecret: 'registry-dev-secret-2024'
+
+# Disable all complex Helm chart dependencies
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+rabbitmq:
+  enabled: false
+
+nats:
+  enabled: false
+
+clickhouse:
+  enabled: false
+
+weaviate:
+  enabled: false
+
+influxdb2:
+  enabled: false
+
+# Enable KubeRay Operator with minimal resources
+kuberay-operator:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Disable image pre-pull and istio
+imagePull:
+  enabled: false
+
+istio:
+  enabled: false
+
+# Persistent volume configuration with minimal sizes
+persistence:
+  storageClass: '' # Use default storage class
+  postgresql:
+    size: '1Gi'
+    accessMode: 'ReadWriteOnce'
+  redis:
+    size: '512Mi'
+    accessMode: 'ReadWriteOnce'
+  rabbitmq:
+    size: '1Gi'
+    accessMode: 'ReadWriteOnce'
+  nats:
+    size: '512Mi'
+    accessMode: 'ReadWriteOnce'
+  clickhouse:
+    size: '2Gi'
+    accessMode: 'ReadWriteOnce'
+  weaviate:
+    size: '1Gi'
+    accessMode: 'ReadWriteOnce'
+  influxdb:
+    size: '1Gi'
+    accessMode: 'ReadWriteOnce'
+  registry:
+    size: '5Gi'
+    accessMode: 'ReadWriteOnce'
+
+# Simple standalone services configuration with minimal resources
+simpleServices:
+  # PostgreSQL - Simple standalone (Latest stable: 17)
+  postgresql:
+    enabled: true
+    image: 'postgres:17-alpine'
+    port: 5432
+    env:
+      POSTGRES_DB: 'ai_platform_dev'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres-dev'
+    resources:
+      requests:
+        memory: '64Mi'
+        cpu: '25m'
+      limits:
+        memory: '128Mi'
+        cpu: '50m'
+
+  # Redis - Simple standalone (Latest stable: 7.4)
+  redis:
+    enabled: true
+    image: 'redis:7.4-alpine'
+    port: 6379
+    resources:
+      requests:
+        memory: '32Mi'
+        cpu: '10m'
+      limits:
+        memory: '64Mi'
+        cpu: '25m'
+
+  # RabbitMQ - Simple standalone (Stable: 3.12)
+  rabbitmq:
+    enabled: true
+    image: 'rabbitmq:3.12-management-alpine'
+    ports:
+      amqp: 5672
+      management: 15672
+    env:
+      RABBITMQ_DEFAULT_USER: 'admin'
+      RABBITMQ_DEFAULT_PASS: 'rabbitmq-dev'
+    resources:
+      requests:
+        memory: '256Mi'
+        cpu: '50m'
+      limits:
+        memory: '512Mi'
+        cpu: '100m'
+
+  # NATS with JetStream - Simple standalone (Latest stable: 2.10)
+  nats:
+    enabled: true
+    image: 'nats:2.10-alpine'
+    port: 4222
+    args:
+      - '--jetstream'
+      - '--store_dir=/data'
+    resources:
+      requests:
+        memory: '32Mi'
+        cpu: '10m'
+      limits:
+        memory: '64Mi'
+        cpu: '25m'
+
+  # ClickHouse - Simple standalone (Latest stable: 24.10)
+  clickhouse:
+    enabled: true
+    image: 'clickhouse/clickhouse-server:24.10-alpine'
+    ports:
+      http: 8123
+      tcp: 9000
+    env:
+      CLICKHOUSE_DB: 'ai_platform_dev'
+      CLICKHOUSE_USER: 'admin'
+      CLICKHOUSE_PASSWORD: 'clickhouse-dev'
+    resources:
+      requests:
+        memory: '256Mi'
+        cpu: '50m'
+      limits:
+        memory: '512Mi'
+        cpu: '100m'
+
+  # Weaviate - Simple standalone (Latest stable: 1.33.0)
+  weaviate:
+    enabled: true
+    image: 'semitechnologies/weaviate:1.33.0'
+    port: 8080
+    env:
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: ''
+      CLUSTER_HOSTNAME: 'node1'
+    resources:
+      requests:
+        memory: '128Mi'
+        cpu: '50m'
+      limits:
+        memory: '256Mi'
+        cpu: '100m'
+
+  # InfluxDB - Simple standalone (Latest stable: 2.7)
+  influxdb:
+    enabled: true
+    image: 'influxdb:2.7-alpine'
+    port: 8086
+    env:
+      DOCKER_INFLUXDB_INIT_MODE: 'setup'
+      DOCKER_INFLUXDB_INIT_USERNAME: 'admin'
+      DOCKER_INFLUXDB_INIT_PASSWORD: 'influxdb-dev'
+      DOCKER_INFLUXDB_INIT_ORG: 'ai-platform'
+      DOCKER_INFLUXDB_INIT_BUCKET: 'metrics'
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: 'influxdb-dev-token'
+    resources:
+      requests:
+        memory: '64Mi'
+        cpu: '25m'
+      limits:
+        memory: '128Mi'
+        cpu: '50m'
+
+  # Docker Registry - Local container registry (Latest stable: 2.8)
+  registry:
+    enabled: true
+    image: 'registry:2.8'
+    port: 5000
+    resources:
+      requests:
+        memory: '64Mi'
+        cpu: '25m'
+      limits:
+        memory: '128Mi'
+        cpu: '50m'
+
+# Ray cluster configuration with minimal resources
+rayCluster:
+  enabled: false # Will enable after operator is ready
+  name: 'ray-cluster-dev'
+  head:
+    resources:
+      requests:
+        memory: '256Mi'
+        cpu: '100m'
+      limits:
+        memory: '512Mi'
+        cpu: '200m'
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+      memory: '268435456' # 256MB in bytes
+      num-cpus: '1'
+  worker:
+    replicas: 0 # Start with no workers to save resources
+    resources:
+      requests:
+        memory: '64Mi'
+        cpu: '50m'
+      limits:
+        memory: '128Mi'
+        cpu: '100m'

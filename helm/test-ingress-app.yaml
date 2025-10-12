@@ -1,0 +1,161 @@
+---
+# Simple nginx deployment for testing
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-nginx
+  namespace: test-ingress
+  labels:
+    app: test-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-nginx
+  template:
+    metadata:
+      labels:
+        app: test-nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+          name: http
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: test-nginx-html
+---
+# ConfigMap with custom HTML
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-nginx-html
+  namespace: test-ingress
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Test Ingress App</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 50px auto;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+            .container {
+                background: rgba(255, 255, 255, 0.1);
+                padding: 30px;
+                border-radius: 10px;
+                backdrop-filter: blur(10px);
+            }
+            h1 { margin-top: 0; }
+            .status { 
+                background: rgba(76, 175, 80, 0.3);
+                padding: 15px;
+                border-radius: 5px;
+                margin: 20px 0;
+            }
+            .info {
+                background: rgba(33, 150, 243, 0.3);
+                padding: 15px;
+                border-radius: 5px;
+                margin: 20px 0;
+            }
+            code {
+                background: rgba(0, 0, 0, 0.3);
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎉 Test Ingress Application</h1>
+            <div class="status">
+                <h2>✅ Status: Running</h2>
+                <p>This is a test application to verify NGINX Ingress Controller is working correctly.</p>
+            </div>
+            <div class="info">
+                <h3>📋 Connection Details:</h3>
+                <ul>
+                    <li><strong>Namespace:</strong> test-ingress</li>
+                    <li><strong>Service:</strong> test-nginx-service</li>
+                    <li><strong>Ingress Host:</strong> test.local</li>
+                    <li><strong>Ingress Class:</strong> nginx</li>
+                </ul>
+            </div>
+            <div class="info">
+                <h3>🔗 Access Methods:</h3>
+                <p><strong>From localhost:</strong></p>
+                <code>curl -H "Host: test.local" http://192.168.5.1</code>
+                <p style="margin-top: 10px;"><strong>Or add to /etc/hosts:</strong></p>
+                <code>192.168.5.1 test.local</code>
+                <p style="margin-top: 10px;">Then visit: <code>http://test.local</code></p>
+            </div>
+            <div class="status">
+                <p><strong>Timestamp:</strong> <span id="timestamp"></span></p>
+            </div>
+        </div>
+        <script>
+            document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        </script>
+    </body>
+    </html>
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-nginx-service
+  namespace: test-ingress
+  labels:
+    app: test-nginx
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: test-nginx
+---
+# Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-nginx-ingress
+  namespace: test-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: test.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: test-nginx-service
+            port:
+              number: 80

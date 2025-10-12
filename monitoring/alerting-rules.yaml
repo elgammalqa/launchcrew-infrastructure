@@ -1,0 +1,74 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ai-platform-infrastructure-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: ai-platform-monitoring
+spec:
+  groups:
+  - name: ai-platform-infrastructure
+    rules:
+    - alert: PostgreSQLDown
+      expr: up{job="postgresql"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "PostgreSQL is down"
+        description: "PostgreSQL database is not responding"
+    
+    - alert: RedisDown
+      expr: up{job="redis"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Redis is down"
+        description: "Redis cache is not responding"
+    
+    - alert: ClickHouseDown
+      expr: up{job="clickhouse"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "ClickHouse is down"
+        description: "ClickHouse analytics database is not responding"
+    
+    - alert: NATSDown
+      expr: up{job="nats"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "NATS is down"
+        description: "NATS message broker is not responding"
+    
+    - alert: InfluxDBDown
+      expr: up{job="influxdb"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "InfluxDB is down"
+        description: "InfluxDB time-series database is not responding"
+    
+    - alert: HighMemoryUsage
+      expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High memory usage detected"
+        description: "Memory usage is above 90% for more than 5 minutes"
+    
+    - alert: HighCPUUsage
+      expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage detected"
+        description: "CPU usage is above 80% for more than 5 minutes"

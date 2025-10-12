@@ -1,0 +1,174 @@
+# Default values for ai-platform-infrastructure
+# This is a YAML-formatted file.
+
+global:
+  # Global namespace for infrastructure components
+  namespace: ai-platform-infra
+  
+  # Global image pull policy
+  imagePullPolicy: IfNotPresent
+  
+  # Global storage class
+  storageClass: ""
+  
+  # Environment configuration
+  environment: dev
+
+# Image pre-pull configuration
+imagePull:
+  enabled: true
+  images:
+    - "postgres:16.4"
+    - "redis:7.4"
+    - "rabbitmq:3.13-management"
+    - "nats:2.10.20"
+    - "clickhouse/clickhouse-server:24.8"
+    - "weaviate/weaviate:1.26.1"
+    - "influxdb:2.7"
+    - "kuberay/operator:v1.2.2"
+    - "rayproject/ray:2.9.0"
+
+# Istio configuration
+istio:
+  enabled: true
+
+# PostgreSQL Configuration - Using Official PostgreSQL Image
+postgresql:
+  enabled: true
+  # CRITICAL: Override Bitnami image with official PostgreSQL
+  image:
+    registry: docker.io
+    repository: postgres
+    tag: "16.4"
+    pullPolicy: IfNotPresent
+  auth:
+    postgresPassword: "postgres-secret"
+    database: "ai_platform"
+  primary:
+    persistence:
+      enabled: false  # Disabled for dev
+      size: 20Gi
+  metrics:
+    enabled: false  # Disabled for dev
+
+# Redis Configuration - Using Official Redis Image
+redis:
+  enabled: true
+  # CRITICAL: Override Bitnami image with official Redis
+  image:
+    registry: docker.io
+    repository: redis
+    tag: "7.4"
+    pullPolicy: IfNotPresent
+  auth:
+    enabled: false  # Disabled for dev
+    password: "redis-secret"
+  master:
+    persistence:
+      enabled: false  # Disabled for dev
+      size: 8Gi
+  metrics:
+    enabled: false  # Disabled for dev
+
+# RabbitMQ Configuration - Using Official RabbitMQ Image
+rabbitmq:
+  enabled: true
+  # CRITICAL: Override Bitnami image with official RabbitMQ
+  image:
+    registry: docker.io
+    repository: rabbitmq
+    tag: "3.13-management"
+    pullPolicy: IfNotPresent
+  auth:
+    username: "admin"
+    password: "rabbitmq-secret"
+  persistence:
+    enabled: false  # Disabled for dev
+    size: 8Gi
+  metrics:
+    enabled: false  # Disabled for dev
+
+# NATS Configuration - Using Official NATS Image
+nats:
+  enabled: true
+  # CRITICAL: Override with official NATS image
+  nats:
+    image:
+      registry: docker.io
+      repository: nats
+      tag: "2.10.20"
+      pullPolicy: IfNotPresent
+  config:
+    jetstream:
+      enabled: false  # Disabled for dev
+      fileStore:
+        pvc:
+          size: 10Gi
+  auth:
+    enabled: false  # Disabled for dev
+
+# ClickHouse Configuration - Using Official ClickHouse Image
+clickhouse:
+  enabled: true
+  # CRITICAL: Override Bitnami image with official ClickHouse
+  image:
+    registry: docker.io
+    repository: clickhouse/clickhouse-server
+    tag: "24.8"
+    pullPolicy: IfNotPresent
+  auth:
+    username: "admin"
+    password: "clickhouse-secret"
+  persistence:
+    enabled: false  # Disabled for dev
+    size: 50Gi
+  metrics:
+    enabled: false  # Disabled for dev
+  # Dev environment configuration
+  shards: 0  # No shards for dev
+  replicaCount: 0  # No replicas for dev
+
+# Weaviate Configuration - Using Official Weaviate Image
+weaviate:
+  enabled: true
+  # CRITICAL: Override with official Weaviate image
+  image:
+    registry: docker.io
+    repository: weaviate/weaviate
+    tag: "1.26.1"
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: false  # Disabled for dev
+    size: 20Gi
+  authentication:
+    anonymous_access:
+      enabled: true  # Allow anonymous access for dev
+  # Dev environment configuration
+  replicas: 0  # No replicas for dev
+
+# InfluxDB Configuration - Using Official InfluxDB Image
+influxdb2:
+  enabled: true  # Keep enabled as it's working
+  # CRITICAL: Override with official InfluxDB image
+  image:
+    registry: docker.io
+    repository: influxdb
+    tag: "2.7"
+    pullPolicy: IfNotPresent
+  auth:
+    admin:
+      username: "admin"
+      password: "influxdb-secret"
+      token: "influxdb-token"
+  persistence:
+    enabled: false  # Disabled for dev
+    size: 20Gi
+  metrics:
+    enabled: false  # Disabled for dev
+
+# KubeRay Operator Configuration - Minimal for Dev
+kuberay-operator:
+  enabled: true
+  
+# Note: Ray clusters are created separately via RayCluster CRDs
+# The operator just manages the lifecycle of Ray clusters

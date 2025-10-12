@@ -1,0 +1,102 @@
+{{- if and .Values.simpleServices (and .Values.simpleServices.nats .Values.simpleServices.nats.enabled) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-nats-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: nats
+spec:
+  accessModes:
+    - {{ .Values.persistence.nats.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.nats.size }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-nats
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: nats
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      component: nats
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        component: nats
+    spec:
+      containers:
+      - name: nats
+        image: {{ .Values.simpleServices.nats.image }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.simpleServices.nats.port }}
+          name: nats
+        - containerPort: 8222
+          name: monitoring
+        args:
+        {{- range .Values.simpleServices.nats.args }}
+        - {{ . | quote }}
+        {{- end }}
+        - '--http_port=8222'
+        resources:
+          {{- toYaml .Values.simpleServices.nats.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8222
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8222
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "ai-platform.fullname" . }}-nats-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: nats
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.simpleServices.nats.port }}
+    targetPort: nats
+    protocol: TCP
+    name: nats
+  - port: 8222
+    targetPort: monitoring
+    protocol: TCP
+    name: monitoring
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    component: nats
+{{- end }}

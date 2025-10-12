@@ -1,0 +1,93 @@
+{{- if .Values.istio.enabled }}
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-allow-app-access
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: network-policy
+spec:
+  # Apply to all workloads in the infrastructure namespace
+  selector: {}
+  rules:
+  # Allow traffic from all application namespaces
+  - from:
+    - source:
+        namespaces: 
+        - "ai-agents-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}"
+        - "auth-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}"
+        - "billing-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}"
+        - "user-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}"
+        - "notification-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}"
+        - "analytics-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}"
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+        # Allow access to all ports (databases, message brokers, etc.)
+  
+  # Allow traffic from istio-system for health checks and monitoring
+  - from:
+    - source:
+        namespaces: ["istio-system"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/health", "/ready", "/metrics", "/status"]
+  
+  # Allow traffic from monitoring namespace (if separate)
+  - from:
+    - source:
+        namespaces: ["monitoring", "prometheus", "kube-system"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/metrics", "/health"]
+
+---
+# Fallback NetworkPolicy for non-Istio environments
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-allow-app-access
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: network-policy
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow traffic from application namespaces
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ai-agents-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}
+    - namespaceSelector:
+        matchLabels:
+          name: auth-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}
+    - namespaceSelector:
+        matchLabels:
+          name: billing-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}
+    - namespaceSelector:
+        matchLabels:
+          name: user-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}
+    - namespaceSelector:
+        matchLabels:
+          name: notification-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}
+    - namespaceSelector:
+        matchLabels:
+          name: analytics-service{{ if eq .Values.global.namespace "ai-platform-infra-dev" }}-dev{{ end }}
+  # Allow traffic from monitoring namespaces
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+{{- end }}

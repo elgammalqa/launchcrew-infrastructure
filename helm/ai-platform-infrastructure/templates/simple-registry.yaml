@@ -1,0 +1,99 @@
+{{- if and .Values.simpleServices (and .Values.simpleServices.registry .Values.simpleServices.registry.enabled) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-registry-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: registry
+spec:
+  accessModes:
+    - {{ .Values.persistence.registry.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.registry.size }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-registry
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      component: registry
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        component: registry
+    spec:
+      containers:
+      - name: registry
+        image: {{ .Values.simpleServices.registry.image }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.simpleServices.registry.port }}
+          name: registry
+        env:
+        - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+          value: "/var/lib/registry"
+        - name: REGISTRY_HTTP_ADDR
+          value: "0.0.0.0:5000"
+        - name: REGISTRY_STORAGE_DELETE_ENABLED
+          value: "true"
+        - name: REGISTRY_HTTP_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: registry-secret
+              key: REGISTRY_HTTP_SECRET
+        resources:
+          {{- toYaml .Values.simpleServices.registry.resources | nindent 10 }}
+        volumeMounts:
+        - name: registry-data
+          mountPath: /var/lib/registry
+        livenessProbe:
+          httpGet:
+            path: /v2/
+            port: registry
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v2/
+            port: registry
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: registry-data
+        persistentVolumeClaim:
+          claimName: {{ include "ai-platform.fullname" . }}-registry-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: registry
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.simpleServices.registry.port }}
+    targetPort: registry
+    protocol: TCP
+    name: registry
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    component: registry
+{{- end }}
