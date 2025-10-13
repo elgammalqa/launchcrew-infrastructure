@@ -13,16 +13,37 @@ help: ## Show this help message
 k8s: deploy ## Deploy infrastructure to Kubernetes (alias)
 
 deploy: ## Deploy infrastructure services to Kubernetes
-	@echo "🚀 Deploying infrastructure to Kubernetes..."
+	@echo "🚀 Deploying AI Platform Infrastructure..."
+	@echo ""
+	@echo "📦 Creating namespace..."
 	@kubectl create namespace ai-platform-infra --dry-run=client -o yaml | kubectl apply -f -
+	@kubectl label namespace ai-platform-infra name=ai-platform-infra --overwrite
+	@echo ""
+	@echo "📊 Installing Helm chart..."
 	@helm upgrade --install ai-platform-infrastructure ./helm/ai-platform-infrastructure \
 		-f ./helm/ai-platform-infrastructure/values-dev.yaml \
-		-n ai-platform-infra
-	@echo "⏳ Waiting for rollout..."
-	@kubectl rollout status deployment/simple-postgresql -n ai-platform-infra --timeout=300s || true
-	@kubectl rollout status deployment/simple-rabbitmq -n ai-platform-infra --timeout=300s || true
+		-n ai-platform-infra \
+		--create-namespace \
+		--wait \
+		--timeout 10m
+	@echo ""
+	@echo "⏳ Waiting for services to be ready..."
+	@kubectl wait --for=condition=ready pod -l component=postgresql -n ai-platform-infra --timeout=180s || echo "⚠️  PostgreSQL not ready yet"
+	@kubectl wait --for=condition=ready pod -l component=redis -n ai-platform-infra --timeout=180s || echo "⚠️  Redis not ready yet"
+	@kubectl wait --for=condition=ready pod -l component=rabbitmq -n ai-platform-infra --timeout=180s || echo "⚠️  RabbitMQ not ready yet"
+	@kubectl wait --for=condition=ready pod -l component=nats -n ai-platform-infra --timeout=180s || echo "⚠️  NATS not ready yet"
+	@kubectl wait --for=condition=ready pod -l component=clickhouse -n ai-platform-infra --timeout=180s || echo "⚠️  ClickHouse not ready yet"
+	@kubectl wait --for=condition=ready pod -l component=weaviate -n ai-platform-infra --timeout=180s || echo "⚠️  Weaviate not ready yet"
+	@kubectl wait --for=condition=ready pod -l component=influxdb -n ai-platform-infra --timeout=180s || echo "⚠️  InfluxDB not ready yet"
+	@kubectl wait --for=condition=ready pod -l component=registry -n ai-platform-infra --timeout=180s || echo "⚠️  Registry not ready yet"
+	@echo ""
 	@echo "✅ Infrastructure deployment completed!"
+	@echo ""
 	@kubectl get pods -n ai-platform-infra
+	@echo ""
+	@kubectl get svc -n ai-platform-infra
+	@echo ""
+	@kubectl get ingress -n ai-platform-infra
 
 # There's no build step for infrastructure since we use existing images
 build: ## No build needed for infrastructure (uses existing images)
@@ -62,6 +83,29 @@ port-forward: ## Setup port forwards for infrastructure services
 
 # Health checks
 health: ## Check health of infrastructure services
-	@echo "🏥 Checking infrastructure health..."
-	@kubectl exec -n ai-platform-infra deployment/simple-postgresql -- pg_isready && echo "✅ PostgreSQL healthy" || echo "❌ PostgreSQL unhealthy"
-	@kubectl exec -n ai-platform-infra deployment/simple-rabbitmq -- rabbitmqctl status && echo "✅ RabbitMQ healthy" || echo "❌ RabbitMQ unhealthy"
+	@echo "🏥 Infrastructure Health Check"
+	@echo "=============================="
+	@echo ""
+	@echo "🗄️  PostgreSQL:"
+	@kubectl exec -n ai-platform-infra deployment/ai-postgresql -- pg_isready -U postgres && echo "  ✅ Healthy" || echo "  ❌ Unhealthy"
+	@echo ""
+	@echo "🔴 Redis:"
+	@kubectl exec -n ai-platform-infra deployment/ai-redis -- redis-cli ping && echo "  ✅ Healthy" || echo "  ❌ Unhealthy"
+	@echo ""
+	@echo "🐰 RabbitMQ:"
+	@kubectl exec -n ai-platform-infra deployment/ai-rabbitmq -- rabbitmqctl status > /dev/null 2>&1 && echo "  ✅ Healthy" || echo "  ❌ Unhealthy"
+	@echo ""
+	@echo "📨 NATS:"
+	@kubectl exec -n ai-platform-infra deployment/ai-nats -- nats-server --version > /dev/null 2>&1 && echo "  ✅ Healthy" || echo "  ❌ Unhealthy"
+	@echo ""
+	@echo "📊 ClickHouse:"
+	@kubectl exec -n ai-platform-infra deployment/ai-clickhouse -- clickhouse-client --query "SELECT 1" > /dev/null 2>&1 && echo "  ✅ Healthy" || echo "  ❌ Unhealthy"
+	@echo ""
+	@echo "🔍 Weaviate:"
+	@kubectl exec -n ai-platform-infra deployment/ai-weaviate -- wget -q -O- http://localhost:8080/v1/.well-known/ready > /dev/null 2>&1 && echo "  ✅ Healthy" || echo "  ❌ Unhealthy"
+	@echo ""
+	@echo "📈 InfluxDB:"
+	@kubectl exec -n ai-platform-infra deployment/ai-influxdb -- influx ping > /dev/null 2>&1 && echo "  ✅ Healthy" || echo "  ❌ Unhealthy"
+	@echo ""
+	@echo "🐳 Registry:"
+	@kubectl exec -n ai-platform-infra deployment/ai-registry -- wget -q -O- http://localhost:5000/v2/ > /dev/null 2>&1 && echo "  ✅ Healthy" || echo "  ❌ Unhealthy"

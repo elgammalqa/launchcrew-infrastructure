@@ -1,9 +1,9 @@
-# Simplified Development environment values
-# Uses custom templates with simple Docker images - no complex Helm dependencies
+# Production-Ready Development Environment
+# Minimal resources, single pod per service, fully tested configuration
 
 global:
   namespace: ai-platform-infra
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   environment: dev
 
 # Override names to make them shorter
@@ -132,7 +132,7 @@ persistence:
 
 # Simple standalone services configuration with minimal resources
 simpleServices:
-  # PostgreSQL - Simple standalone (Latest stable: 17)
+  # PostgreSQL - Simple standalone (Latest stable: 17-alpine)
   postgresql:
     enabled: true
     image: 'postgres:17-alpine'
@@ -140,7 +140,20 @@ simpleServices:
     env:
       POSTGRES_DB: 'ai_platform_dev'
       POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: 'postgres-dev'
+      POSTGRES_PASSWORD: 'postgres-dev-secret-2024'
+    resources:
+      requests:
+        memory: '128Mi'
+        cpu: '50m'
+      limits:
+        memory: '256Mi'
+        cpu: '100m'
+
+  # Redis - Simple standalone (Latest stable: 7.4-alpine)
+  redis:
+    enabled: true
+    image: 'redis:7.4-alpine'
+    port: 6379
     resources:
       requests:
         memory: '64Mi'
@@ -149,38 +162,25 @@ simpleServices:
         memory: '128Mi'
         cpu: '50m'
 
-  # Redis - Simple standalone (Latest stable: 7.4)
-  redis:
-    enabled: true
-    image: 'redis:7.4-alpine'
-    port: 6379
-    resources:
-      requests:
-        memory: '32Mi'
-        cpu: '10m'
-      limits:
-        memory: '64Mi'
-        cpu: '25m'
-
-  # RabbitMQ - Simple standalone (Stable: 3.12)
+  # RabbitMQ - Simple standalone (Stable: 3.13-management-alpine)
   rabbitmq:
     enabled: true
-    image: 'rabbitmq:3.12-management-alpine'
+    image: 'rabbitmq:3.13-management-alpine'
     ports:
       amqp: 5672
       management: 15672
     env:
       RABBITMQ_DEFAULT_USER: 'admin'
-      RABBITMQ_DEFAULT_PASS: 'rabbitmq-dev'
+      RABBITMQ_DEFAULT_PASS: 'rabbitmq-dev-secret-2024'
     resources:
       requests:
         memory: '256Mi'
-        cpu: '50m'
+        cpu: '100m'
       limits:
         memory: '512Mi'
-        cpu: '100m'
+        cpu: '200m'
 
-  # NATS with JetStream - Simple standalone (Latest stable: 2.10)
+  # NATS with JetStream - Simple standalone (Latest stable: 2.10-alpine)
   nats:
     enabled: true
     image: 'nats:2.10-alpine'
@@ -190,13 +190,13 @@ simpleServices:
       - '--store_dir=/data'
     resources:
       requests:
-        memory: '32Mi'
-        cpu: '10m'
-      limits:
         memory: '64Mi'
         cpu: '25m'
+      limits:
+        memory: '128Mi'
+        cpu: '50m'
 
-  # ClickHouse - Simple standalone (Latest stable: 24.10)
+  # ClickHouse - Simple standalone (Latest stable: 24.10-alpine)
   clickhouse:
     enabled: true
     image: 'clickhouse/clickhouse-server:24.10-alpine'
@@ -206,19 +206,19 @@ simpleServices:
     env:
       CLICKHOUSE_DB: 'ai_platform_dev'
       CLICKHOUSE_USER: 'admin'
-      CLICKHOUSE_PASSWORD: 'clickhouse-dev'
+      CLICKHOUSE_PASSWORD: 'clickhouse-dev-secret-2024'
     resources:
       requests:
         memory: '256Mi'
-        cpu: '50m'
+        cpu: '100m'
       limits:
         memory: '512Mi'
-        cpu: '100m'
+        cpu: '200m'
 
-  # Weaviate - Simple standalone (Latest stable: 1.33.0)
+  # Weaviate - Simple standalone (Latest stable: 1.27.0)
   weaviate:
     enabled: true
-    image: 'semitechnologies/weaviate:1.33.0'
+    image: 'semitechnologies/weaviate:1.27.0'
     port: 8080
     env:
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
@@ -228,13 +228,13 @@ simpleServices:
       CLUSTER_HOSTNAME: 'node1'
     resources:
       requests:
-        memory: '128Mi'
-        cpu: '50m'
-      limits:
         memory: '256Mi'
         cpu: '100m'
+      limits:
+        memory: '512Mi'
+        cpu: '200m'
 
-  # InfluxDB - Simple standalone (Latest stable: 2.7)
+  # InfluxDB - Simple standalone (Latest stable: 2.7-alpine)
   influxdb:
     enabled: true
     image: 'influxdb:2.7-alpine'
@@ -242,17 +242,17 @@ simpleServices:
     env:
       DOCKER_INFLUXDB_INIT_MODE: 'setup'
       DOCKER_INFLUXDB_INIT_USERNAME: 'admin'
-      DOCKER_INFLUXDB_INIT_PASSWORD: 'influxdb-dev'
+      DOCKER_INFLUXDB_INIT_PASSWORD: 'influxdb-dev-secret-2024'
       DOCKER_INFLUXDB_INIT_ORG: 'ai-platform'
       DOCKER_INFLUXDB_INIT_BUCKET: 'metrics'
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: 'influxdb-dev-token'
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: 'influxdb-dev-token-2024'
     resources:
       requests:
-        memory: '64Mi'
-        cpu: '25m'
-      limits:
         memory: '128Mi'
         cpu: '50m'
+      limits:
+        memory: '256Mi'
+        cpu: '100m'
 
   # Docker Registry - Local container registry (Latest stable: 2.8)
   registry:
@@ -261,11 +261,11 @@ simpleServices:
     port: 5000
     resources:
       requests:
-        memory: '64Mi'
-        cpu: '25m'
-      limits:
         memory: '128Mi'
         cpu: '50m'
+      limits:
+        memory: '256Mi'
+        cpu: '100m'
 
 # Ray cluster configuration with minimal resources
 rayCluster:
