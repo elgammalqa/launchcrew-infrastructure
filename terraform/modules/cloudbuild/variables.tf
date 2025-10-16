@@ -31,5 +31,11 @@ variable "github_repo" {
 variable "enable_triggers" {
   description = "Enable Cloud Build triggers (requires GitHub connection)"
   type        = bool
-  default     = true
+  default     = false
+}
+
+variable "github_connection_name" {
+  description = "GitHub connection name (create via console first)"
+  type        = string
+  default     = "github"
 }
