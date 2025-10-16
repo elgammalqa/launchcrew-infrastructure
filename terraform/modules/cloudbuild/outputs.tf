@@ -13,7 +13,11 @@ output "build_artifacts_bucket" {
   value       = google_storage_bucket.build_artifacts.name
 }
 
-output "main_trigger_id" {
-  description = "Main branch trigger ID"
-  value       = var.enable_triggers ? google_cloudbuild_trigger.main[0].id : null
+output "trigger_ids" {
+  description = "Cloud Build trigger IDs"
+  value = {
+    ai_agents = var.enable_triggers ? google_cloudbuild_trigger.ai_agents[0].id : null
+    auth      = var.enable_triggers ? google_cloudbuild_trigger.auth[0].id : null
+    billing   = var.enable_triggers ? google_cloudbuild_trigger.billing[0].id : null
+  }
 }
