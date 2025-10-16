@@ -1,0 +1,14 @@
+project_id      = "your-gcp-project-id"
+region          = "us-central1"
+billing_account = "XXXXXX-XXXXXX-XXXXXX"
+alert_emails    = ["your-email@example.com"]
+
+# Optional: Add secrets
+secrets = {
+  # "db-password" = {
+  #   secret_data = "your-secret-value"
+  #   labels = {
+  #     app = "database"
+  #   }
+  # }
+}

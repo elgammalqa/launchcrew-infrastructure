@@ -1,0 +1,24 @@
+{{- if and .Values.rayCluster.enabled .Values.rayCluster.scaleToZero .Values.keda.enabled }}
+---
+# Ray Head - scale based on job submissions
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ray-head-scaler
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: ray.io/v1
+    kind: RayCluster
+    name: ray-cluster-{{ .Values.global.environment }}
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 600
+  triggers:
+  - type: cron
+    metadata:
+      timezone: America/Chicago
+      start: 0 7 * * *
+      end: 0 21 * * *
+      desiredReplicas: "1"
+{{- end }}

@@ -1,0 +1,90 @@
+{{- if .Values.keda.httpAddOn.enabled }}
+---
+# Registry - HTTP traffic based scale-to-zero
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-registry-http
+  namespace: {{ .Values.global.namespace }}
+spec:
+  hosts:
+  - registry.{{ .Values.global.namespace }}.svc.cluster.local
+  - registry.local
+  targetPendingRequests: 100
+  scaledownPeriod: 300
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-registry
+    kind: Deployment
+    apiVersion: apps/v1
+    service: registry
+    port: 5000
+  replicas:
+    min: 0
+    max: 3
+---
+# InfluxDB - HTTP traffic based scale-to-zero
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-influxdb-http
+  namespace: {{ .Values.global.namespace }}
+spec:
+  hosts:
+  - influxdb.{{ .Values.global.namespace }}.svc.cluster.local
+  - influxdb.local
+  targetPendingRequests: 100
+  scaledownPeriod: 300
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-influxdb
+    kind: Deployment
+    apiVersion: apps/v1
+    service: influxdb
+    port: 8086
+  replicas:
+    min: 0
+    max: 3
+---
+# Weaviate - HTTP traffic based scale-to-zero
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-weaviate-http
+  namespace: {{ .Values.global.namespace }}
+spec:
+  hosts:
+  - weaviate.{{ .Values.global.namespace }}.svc.cluster.local
+  - weaviate.local
+  targetPendingRequests: 100
+  scaledownPeriod: 300
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-weaviate
+    kind: Deployment
+    apiVersion: apps/v1
+    service: weaviate
+    port: 8080
+  replicas:
+    min: 0
+    max: 3
+---
+# ClickHouse - HTTP traffic based scale-to-zero
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-clickhouse-http
+  namespace: {{ .Values.global.namespace }}
+spec:
+  hosts:
+  - clickhouse.{{ .Values.global.namespace }}.svc.cluster.local
+  - clickhouse.local
+  targetPendingRequests: 100
+  scaledownPeriod: 300
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-clickhouse
+    kind: Deployment
+    apiVersion: apps/v1
+    service: clickhouse
+    port: 8123
+  replicas:
+    min: 0
+    max: 3
+{{- end }}

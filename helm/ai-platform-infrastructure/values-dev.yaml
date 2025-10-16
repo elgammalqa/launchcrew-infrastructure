@@ -87,13 +87,14 @@ influxdb2:
 # Enable KubeRay Operator with minimal resources
 kuberay-operator:
   enabled: true
+  scaleToZero: true  # Enable KEDA scaling
   resources:
     limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
       cpu: 50m
       memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
 
 # Disable image pre-pull and istio
 imagePull:
@@ -143,11 +144,11 @@ simpleServices:
       POSTGRES_PASSWORD: 'postgres-dev-secret-2024'
     resources:
       requests:
+        memory: '64Mi'
+        cpu: '25m'
+      limits:
         memory: '128Mi'
         cpu: '50m'
-      limits:
-        memory: '256Mi'
-        cpu: '100m'
 
   # Redis - Simple standalone (Latest stable: 7.4-alpine)
   redis:
@@ -156,11 +157,11 @@ simpleServices:
     port: 6379
     resources:
       requests:
+        memory: '32Mi'
+        cpu: '10m'
+      limits:
         memory: '64Mi'
         cpu: '25m'
-      limits:
-        memory: '128Mi'
-        cpu: '50m'
 
   # RabbitMQ - Simple standalone (Stable: 3.13-management-alpine)
   rabbitmq:
@@ -174,11 +175,11 @@ simpleServices:
       RABBITMQ_DEFAULT_PASS: 'rabbitmq-dev-secret-2024'
     resources:
       requests:
+        memory: '128Mi'
+        cpu: '50m'
+      limits:
         memory: '256Mi'
         cpu: '100m'
-      limits:
-        memory: '512Mi'
-        cpu: '200m'
 
   # NATS with JetStream - Simple standalone (Latest stable: 2.10-alpine)
   nats:
@@ -190,11 +191,11 @@ simpleServices:
       - '--store_dir=/data'
     resources:
       requests:
+        memory: '32Mi'
+        cpu: '10m'
+      limits:
         memory: '64Mi'
         cpu: '25m'
-      limits:
-        memory: '128Mi'
-        cpu: '50m'
 
   # ClickHouse - Simple standalone (Latest stable: 24.10-alpine)
   clickhouse:
@@ -209,11 +210,11 @@ simpleServices:
       CLICKHOUSE_PASSWORD: 'clickhouse-dev-secret-2024'
     resources:
       requests:
+        memory: '128Mi'
+        cpu: '50m'
+      limits:
         memory: '256Mi'
         cpu: '100m'
-      limits:
-        memory: '512Mi'
-        cpu: '200m'
 
   # Weaviate - Simple standalone (Latest stable: 1.27.0)
   weaviate:
@@ -228,11 +229,11 @@ simpleServices:
       CLUSTER_HOSTNAME: 'node1'
     resources:
       requests:
+        memory: '128Mi'
+        cpu: '50m'
+      limits:
         memory: '256Mi'
         cpu: '100m'
-      limits:
-        memory: '512Mi'
-        cpu: '200m'
 
   # InfluxDB - Simple standalone (Latest stable: 2.7-alpine)
   influxdb:
@@ -248,11 +249,11 @@ simpleServices:
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: 'influxdb-dev-token-2024'
     resources:
       requests:
+        memory: '64Mi'
+        cpu: '25m'
+      limits:
         memory: '128Mi'
         cpu: '50m'
-      limits:
-        memory: '256Mi'
-        cpu: '100m'
 
   # Docker Registry - Local container registry (Latest stable: 2.8)
   registry:
@@ -261,34 +262,42 @@ simpleServices:
     port: 5000
     resources:
       requests:
+        memory: '64Mi'
+        cpu: '25m'
+      limits:
         memory: '128Mi'
         cpu: '50m'
-      limits:
-        memory: '256Mi'
-        cpu: '100m'
 
 # Ray cluster configuration with minimal resources
 rayCluster:
-  enabled: false # Will enable after operator is ready
+  enabled: false  # Disabled to allow scale to zero
+  scaleToZero: true  # Enable KEDA scaling for Ray
   name: 'ray-cluster-dev'
   head:
     resources:
       requests:
+        memory: '128Mi'
+        cpu: '50m'
+      limits:
         memory: '256Mi'
         cpu: '100m'
-      limits:
-        memory: '512Mi'
-        cpu: '200m'
     rayStartParams:
       dashboard-host: '0.0.0.0'
-      memory: '268435456' # 256MB in bytes
+      memory: '134217728'
       num-cpus: '1'
   worker:
-    replicas: 0 # Start with no workers to save resources
+    replicas: 0
     resources:
       requests:
         memory: '64Mi'
-        cpu: '50m'
+        cpu: '25m'
       limits:
         memory: '128Mi'
-        cpu: '100m'
+        cpu: '50m'
+
+# KEDA autoscaling configuration
+keda:
+  enabled: true
+  scalingMode: hybrid  # Cron for databases, HTTP traffic for web services
+  httpAddOn:
+    enabled: true  # HTTP traffic-based scale-to-zero for web services

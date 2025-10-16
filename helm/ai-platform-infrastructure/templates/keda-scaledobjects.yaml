@@ -1,0 +1,105 @@
+{{- if .Values.keda.enabled }}
+---
+# KubeRay Operator - Cron based scaling
+{{- if index .Values "kuberay-operator" "scaleToZero" }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: kuberay-operator-scaler
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    name: kuberay-operator
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 300
+  triggers:
+  - type: cron
+    metadata:
+      timezone: America/Chicago
+      start: 0 7 * * *
+      end: 0 21 * * *
+      desiredReplicas: "1"
+{{- end }}
+---
+# Databases use CRON-based scaling (TCP services)
+# PostgreSQL - Cron based (7 AM - 9 PM CST)
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-postgresql-scaler
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-postgresql
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 300
+  triggers:
+  - type: cron
+    metadata:
+      timezone: America/Chicago
+      start: 0 7 * * *
+      end: 0 21 * * *
+      desiredReplicas: "1"
+---
+# Redis - Cron based
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-redis-scaler
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-redis
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 300
+  triggers:
+  - type: cron
+    metadata:
+      timezone: America/Chicago
+      start: 0 7 * * *
+      end: 0 21 * * *
+      desiredReplicas: "1"
+---
+# RabbitMQ - Cron based
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-rabbitmq-scaler
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-rabbitmq
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 300
+  triggers:
+  - type: cron
+    metadata:
+      timezone: America/Chicago
+      start: 0 7 * * *
+      end: 0 21 * * *
+      desiredReplicas: "1"
+---
+# NATS - Cron based
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-nats-scaler
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-nats
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 300
+  triggers:
+  - type: cron
+    metadata:
+      timezone: America/Chicago
+      start: 0 7 * * *
+      end: 0 21 * * *
+      desiredReplicas: "1"
+{{- end }}
