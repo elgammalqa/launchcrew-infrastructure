@@ -1,0 +1,39 @@
+steps:
+  # Run tests
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'run-tests'
+    args:
+      - 'build'
+      - '--target=test'
+      - '-t'
+      - 'test-image'
+      - '.'
+    dir: 'services'
+
+  # Build Docker images (no push)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-images'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGISTRY}/app:pr-${SHORT_SHA}'
+      - '.'
+    dir: 'services'
+
+  # Lint Kubernetes manifests
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'lint-k8s'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        kubectl apply --dry-run=client -f infrastructure/helm/ || true
+
+timeout: 600s
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _ENVIRONMENT: 'dev'
+  _REGISTRY: 'us-central1-docker.pkg.dev/${PROJECT_ID}/dev-docker-repo'

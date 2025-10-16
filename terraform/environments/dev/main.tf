@@ -81,3 +81,17 @@ module "monitoring" {
 
   depends_on = [module.gke, module.budget]
 }
+
+# Cloud Build Module
+module "cloudbuild" {
+  source = "../../modules/cloudbuild"
+
+  project_id   = var.project_id
+  region       = var.region
+  environment  = local.environment
+  cluster_name = module.gke.cluster_name
+  github_owner = var.github_owner
+  github_repo  = var.github_repo
+
+  depends_on = [module.gke]
+}

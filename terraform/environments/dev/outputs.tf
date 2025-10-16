@@ -14,6 +14,21 @@ output "network_name" {
   value       = module.vpc.network_name
 }
 
+output "cloudbuild_service_account" {
+  description = "Cloud Build service account email"
+  value       = module.cloudbuild.service_account_email
+}
+
+output "artifact_registry_url" {
+  description = "Artifact Registry URL"
+  value       = module.cloudbuild.artifact_registry_url
+}
+
+output "build_artifacts_bucket" {
+  description = "Build artifacts bucket"
+  value       = module.cloudbuild.build_artifacts_bucket
+}
+
 output "budget_name" {
   description = "Budget name"
   value       = module.budget.budget_name

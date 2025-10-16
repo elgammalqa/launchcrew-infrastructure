@@ -1,0 +1,70 @@
+steps:
+  # Build Docker images
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-images'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGISTRY}/app:${SHORT_SHA}'
+      - '-t'
+      - '${_REGISTRY}/app:latest'
+      - '.'
+    dir: 'services'
+
+  # Push images to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-images'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGISTRY}/app'
+
+  # Get GKE credentials
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'get-credentials'
+    args:
+      - 'container'
+      - 'clusters'
+      - 'get-credentials'
+      - '${_CLUSTER_NAME}'
+      - '--region=${_CLUSTER_REGION}'
+
+  # Deploy to Kubernetes
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'deploy-k8s'
+    args:
+      - 'set'
+      - 'image'
+      - 'deployment/app'
+      - 'app=${_REGISTRY}/app:${SHORT_SHA}'
+      - '-n'
+      - '${_ENVIRONMENT}'
+    env:
+      - 'CLOUDSDK_COMPUTE_REGION=${_CLUSTER_REGION}'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}'
+
+  # Verify deployment
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'verify-deployment'
+    args:
+      - 'rollout'
+      - 'status'
+      - 'deployment/app'
+      - '-n'
+      - '${_ENVIRONMENT}'
+      - '--timeout=5m'
+
+timeout: 1200s
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+  
+substitutions:
+  _ENVIRONMENT: 'dev'
+  _CLUSTER_NAME: 'dev-gke-cluster'
+  _CLUSTER_REGION: 'us-central1'
+  _REGISTRY: 'us-central1-docker.pkg.dev/${PROJECT_ID}/dev-docker-repo'
+
+images:
+  - '${_REGISTRY}/app:${SHORT_SHA}'
+  - '${_REGISTRY}/app:latest'

@@ -19,6 +19,18 @@ variable "alert_emails" {
   type        = list(string)
 }
 
+variable "github_owner" {
+  description = "GitHub repository owner"
+  type        = string
+  default     = "elgammalqa"
+}
+
+variable "github_repo" {
+  description = "GitHub repository name"
+  type        = string
+  default     = "launchcrew-services"
+}
+
 variable "secrets" {
   description = "Map of secrets to create"
   type = map(object({
