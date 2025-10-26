@@ -1,24 +1,6 @@
 {{- if and .Values.simpleServices (and .Values.simpleServices.weaviate .Values.simpleServices.weaviate.enabled) }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "ai-platform.fullname" . }}-weaviate-pvc
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    {{- include "ai-platform.labels" . | nindent 4 }}
-    component: weaviate
-spec:
-  accessModes:
-    - {{ .Values.persistence.weaviate.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.weaviate.size }}
-  {{- if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass }}
-  {{- end }}
----
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "ai-platform.fullname" . }}-weaviate
   namespace: {{ .Values.global.namespace }}
@@ -26,6 +8,7 @@ metadata:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: weaviate
 spec:
+  serviceName: weaviate
   replicas: 1
   selector:
     matchLabels:
@@ -78,10 +61,21 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/weaviate
-      volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: {{ include "ai-platform.fullname" . }}-weaviate-pvc
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        {{- include "ai-platform.labels" . | nindent 8 }}
+        component: weaviate
+    spec:
+      accessModes:
+        - {{ .Values.persistence.weaviate.accessMode }}
+      resources:
+        requests:
+          storage: {{ .Values.persistence.weaviate.size }}
+      {{- if .Values.persistence.storageClass }}
+      storageClassName: {{ .Values.persistence.storageClass }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

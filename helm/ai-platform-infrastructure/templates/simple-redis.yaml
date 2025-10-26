@@ -1,24 +1,6 @@
 {{- if and .Values.simpleServices (and .Values.simpleServices.redis .Values.simpleServices.redis.enabled) }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "ai-platform.fullname" . }}-redis-pvc
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    {{- include "ai-platform.labels" . | nindent 4 }}
-    component: redis
-spec:
-  accessModes:
-    - {{ .Values.persistence.redis.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.redis.size }}
-  {{- if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass }}
-  {{- end }}
----
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "ai-platform.fullname" . }}-redis
   namespace: {{ .Values.global.namespace }}
@@ -26,6 +8,7 @@ metadata:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: redis
 spec:
+  serviceName: redis
   replicas: 1
   selector:
     matchLabels:
@@ -75,10 +58,21 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-      volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: {{ include "ai-platform.fullname" . }}-redis-pvc
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        {{- include "ai-platform.labels" . | nindent 8 }}
+        component: redis
+    spec:
+      accessModes:
+        - {{ .Values.persistence.redis.accessMode }}
+      resources:
+        requests:
+          storage: {{ .Values.persistence.redis.size }}
+      {{- if .Values.persistence.storageClass }}
+      storageClassName: {{ .Values.persistence.storageClass }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

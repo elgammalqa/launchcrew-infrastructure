@@ -1,24 +1,6 @@
 {{- if and .Values.simpleServices (and .Values.simpleServices.registry .Values.simpleServices.registry.enabled) }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "ai-platform.fullname" . }}-registry-pvc
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    {{- include "ai-platform.labels" . | nindent 4 }}
-    component: registry
-spec:
-  accessModes:
-    - {{ .Values.persistence.registry.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.registry.size }}
-  {{- if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass }}
-  {{- end }}
----
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "ai-platform.fullname" . }}-registry
   namespace: {{ .Values.global.namespace }}
@@ -26,6 +8,7 @@ metadata:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: registry
 spec:
+  serviceName: registry
   replicas: 1
   selector:
     matchLabels:
@@ -73,10 +56,21 @@ spec:
             port: registry
           initialDelaySeconds: 5
           periodSeconds: 5
-      volumes:
-      - name: registry-data
-        persistentVolumeClaim:
-          claimName: {{ include "ai-platform.fullname" . }}-registry-pvc
+  volumeClaimTemplates:
+  - metadata:
+      name: registry-data
+      labels:
+        {{- include "ai-platform.labels" . | nindent 8 }}
+        component: registry
+    spec:
+      accessModes:
+        - {{ .Values.persistence.registry.accessMode }}
+      resources:
+        requests:
+          storage: {{ .Values.persistence.registry.size }}
+      {{- if .Values.persistence.storageClass }}
+      storageClassName: {{ .Values.persistence.storageClass }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

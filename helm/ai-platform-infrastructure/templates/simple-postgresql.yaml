@@ -1,24 +1,6 @@
 {{- if and .Values.simpleServices (and .Values.simpleServices.postgresql .Values.simpleServices.postgresql.enabled) }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "ai-platform.fullname" . }}-postgresql-pvc
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    {{- include "ai-platform.labels" . | nindent 4 }}
-    component: postgresql
-spec:
-  accessModes:
-    - {{ .Values.persistence.postgresql.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.postgresql.size }}
-  {{- if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass }}
-  {{- end }}
----
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "ai-platform.fullname" . }}-postgresql
   namespace: {{ .Values.global.namespace }}
@@ -26,6 +8,7 @@ metadata:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: postgresql
 spec:
+  serviceName: postgresql
   replicas: 1
   selector:
     matchLabels:
@@ -87,10 +70,21 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
-      volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: {{ include "ai-platform.fullname" . }}-postgresql-pvc
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        {{- include "ai-platform.labels" . | nindent 8 }}
+        component: postgresql
+    spec:
+      accessModes:
+        - {{ .Values.persistence.postgresql.accessMode }}
+      resources:
+        requests:
+          storage: {{ .Values.persistence.postgresql.size }}
+      {{- if .Values.persistence.storageClass }}
+      storageClassName: {{ .Values.persistence.storageClass }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service
