@@ -301,3 +301,13 @@ keda:
   scalingMode: hybrid  # Cron for databases, HTTP traffic for web services
   httpAddOn:
     enabled: false  # Disabled HTTP traffic-based scaling since ingress is removed
+
+# Auto-scaling configuration using CronJobs
+# This scales ALL infrastructure (including StatefulSets) to 0 outside working hours
+autoScaling:
+  enabled: true
+  timezone: 'America/Chicago'
+  scaleDown:
+    schedule: '0 21 * * *'  # 9 PM CST - Scale down to 0
+  scaleUp:
+    schedule: '0 7 * * *'   # 7 AM CST - Scale up to 1
