@@ -282,28 +282,28 @@ rayCluster:
   
   # Head node configuration
   head:
-    numCpus: '2'
+    numCpus: '1'
     resources:
       requests:
+        memory: '1Gi'
+        cpu: '500m'
+      limits:
         memory: '2Gi'
         cpu: '1'
-      limits:
-        memory: '4Gi'
-        cpu: '2'
   
   # Worker nodes configuration
   worker:
-    replicas: 2
-    minReplicas: 1
-    maxReplicas: 5
-    numCpus: '2'
+    replicas: 1
+    minReplicas: 0
+    maxReplicas: 3
+    numCpus: '1'
     resources:
       requests:
+        memory: '1Gi'
+        cpu: '500m'
+      limits:
         memory: '2Gi'
         cpu: '1'
-      limits:
-        memory: '4Gi'
-        cpu: '2'
   
   # Environment variables for AI providers (optional)
   env:
