@@ -30,7 +30,7 @@ Ray distributed computing framework has been integrated into the ai-platform-inf
 
 ### Images
 - **Operator**: kuberay/operator:v1.2.2
-- **Ray**: rayproject/ray:2.9.0
+- **Ray**: rayproject/ray:2.47.1-py312
 
 ### Services
 - **Client Port**: 10001 (Ray client connections)

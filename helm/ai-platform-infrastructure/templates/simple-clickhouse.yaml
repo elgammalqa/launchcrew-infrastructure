@@ -1,5 +1,74 @@
 {{- if and .Values.simpleServices (and .Values.simpleServices.clickhouse .Values.simpleServices.clickhouse.enabled) }}
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-clickhouse-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    component: clickhouse
+data:
+  config.xml: |
+    <clickhouse>
+        <logger>
+            <level>warning</level>
+            <console>true</console>
+        </logger>
+        <http_port>8123</http_port>
+        <tcp_port>9000</tcp_port>
+        <listen_host>0.0.0.0</listen_host>
+        <max_connections>100</max_connections>
+        <keep_alive_timeout>3</keep_alive_timeout>
+        <max_concurrent_queries>50</max_concurrent_queries>
+        <uncompressed_cache_size>134217728</uncompressed_cache_size>
+        <mark_cache_size>67108864</mark_cache_size>
+        <path>/var/lib/clickhouse/</path>
+        <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+        <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+        <users_config>users.xml</users_config>
+        <default_profile>default</default_profile>
+        <default_database>default</default_database>
+        <timezone>UTC</timezone>
+        <mlock_executable>false</mlock_executable>
+        <remap_executable>false</remap_executable>
+        <query_log>
+            <database>system</database>
+            <table>query_log</table>
+            <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        </query_log>
+    </clickhouse>
+  users.xml: |
+    <clickhouse>
+        <profiles>
+            <default>
+                <max_memory_usage>536870912</max_memory_usage>
+                <use_uncompressed_cache>0</use_uncompressed_cache>
+                <load_balancing>random</load_balancing>
+            </default>
+        </profiles>
+        <users>
+            <default>
+                <password></password>
+                <networks incl="networks_config"/>
+                <profile>default</profile>
+                <quota>default</quota>
+            </default>
+        </users>
+        <quotas>
+            <default>
+                <interval>
+                    <duration>3600</duration>
+                    <queries>0</queries>
+                    <errors>0</errors>
+                    <result_rows>0</result_rows>
+                    <read_rows>0</read_rows>
+                    <execution_time>0</execution_time>
+                </interval>
+            </default>
+        </quotas>
+    </clickhouse>
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "ai-platform.fullname" . }}-clickhouse-pvc
@@ -62,6 +131,8 @@ spec:
             secretKeyRef:
               name: clickhouse-secret
               key: CLICKHOUSE_PASSWORD
+        - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+          value: "1"
         resources:
           {{- toYaml .Values.simpleServices.clickhouse.resources | nindent 10 }}
         livenessProbe:
@@ -83,10 +154,19 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/clickhouse
+        - name: config
+          mountPath: /etc/clickhouse-server/config.xml
+          subPath: config.xml
+        - name: config
+          mountPath: /etc/clickhouse-server/users.xml
+          subPath: users.xml
       volumes:
       - name: data
         persistentVolumeClaim:
           claimName: {{ include "ai-platform.fullname" . }}-clickhouse-pvc
+      - name: config
+        configMap:
+          name: {{ include "ai-platform.fullname" . }}-clickhouse-config
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-agents-service
+  namespace: ai-platform-agents
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  labels:
+    app.kubernetes.io/component: ai-agents
+    app.kubernetes.io/name: ai-agents-service
+    app.kubernetes.io/part-of: ai-platform
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.flwcre.com
+    secretName: api-flwcre-tls
+  rules:
+  - host: api.flwcre.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-agents-service
+            port:
+              number: 8000

@@ -8,7 +8,7 @@ metadata:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: ray-cluster
 spec:
-  rayVersion: '2.9.0'
+  rayVersion: '2.47.1-py312'
   enableInTreeAutoscaling: false
   headGroupSpec:
     rayStartParams:
@@ -20,7 +20,7 @@ spec:
       spec:
         containers:
         - name: ray-head
-          image: rayproject/ray:2.9.0
+          image: rayproject/ray:2.47.1-py312
           resources:
             {{- toYaml .Values.rayCluster.head.resources | nindent 12 }}
           ports:
@@ -51,22 +51,6 @@ spec:
             name: log-volume
           - mountPath: /dev/shm
             name: shared-mem
-          readinessProbe:
-            httpGet:
-              path: /api/gcs_healthz
-              port: 8265
-            initialDelaySeconds: 60
-            periodSeconds: 10
-            timeoutSeconds: 10
-            failureThreshold: 10
-          livenessProbe:
-            httpGet:
-              path: /api/gcs_healthz
-              port: 8265
-            initialDelaySeconds: 120
-            periodSeconds: 30
-            timeoutSeconds: 10
-            failureThreshold: 5
         volumes:
         - name: log-volume
           emptyDir: {}
@@ -86,7 +70,7 @@ spec:
       spec:
         containers:
         - name: ray-worker
-          image: rayproject/ray:2.9.0
+          image: rayproject/ray:2.47.1-py312
           resources:
             {{- toYaml .Values.rayCluster.worker.resources | nindent 12 }}
           volumeMounts:

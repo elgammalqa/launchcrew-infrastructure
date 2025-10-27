@@ -20,7 +20,7 @@ The chart uses a parent-child dependency model where:
 | ClickHouse | `clickhouse/clickhouse-server:24.8` | Analytics database |
 | Weaviate | `weaviate/weaviate:1.26.1` | Vector database |
 | InfluxDB | `influxdb:2.7` | Time series database |
-| Ray | `rayproject/ray:2.9.0` | Distributed computing framework |
+| Ray | `rayproject/ray:2.47.1-py312` | Distributed computing framework |
 
 ## 🚀 Quick Start
 

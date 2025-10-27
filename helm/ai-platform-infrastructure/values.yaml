@@ -26,7 +26,7 @@ imagePull:
     - "weaviate/weaviate:1.26.1"
     - "influxdb:2.7"
     - "kuberay/operator:v1.2.2"
-    - "rayproject/ray:2.9.0"
+    - "rayproject/ray:2.47.1-py312"
 
 # Istio configuration
 istio:

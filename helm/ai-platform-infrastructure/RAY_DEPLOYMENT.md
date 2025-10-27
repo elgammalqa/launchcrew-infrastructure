@@ -78,7 +78,7 @@ kuberay:
 
 The main values.yaml contains:
 - **Operator**: KubeRay operator with minimal resources
-- **Head Node**: 1 CPU, 2Gi RAM, Ray 2.9.0
+- **Head Node**: 1 CPU, 2Gi RAM, Ray 2.47.1-py312
 - **Worker Node**: 1 replica, 1 CPU, 2Gi RAM
 - **Services**: ClusterIP for client (10001), dashboard (8265), GCS (6379)
 - **Autoscaling**: Disabled for dev

@@ -2,52 +2,7 @@
 
 Guide for deploying microservices to GKE using Cloud Build and Helm.
 
-## Prerequisites
-
-1. **Connect GitHub to Cloud Build**: https://console.cloud.google.com/cloud-build/triggers;region=us-central1/connect
-2. **Enable triggers**: Set `enable_triggers = true` in `terraform/environments/dev/main.tf` and run `make -C terraform apply-dev`
-
-## Service Structure
-
-```
-services/your-service/
-├── Dockerfile
-├── cloudbuild.yaml
-├── helm/
-│   ├── Chart.yaml
-│   ├── values.yaml
-│   ├── values-dev.yaml
-│   ├── values-prod.yaml
-│   └── templates/
-│       ├── deployment.yaml
-│       ├── service.yaml
-│       ├── ingress.yaml
-│       └── scaledobject.yaml
-└── src/
-```
-
----
-
-## Required CI/CD Files
-
-### 1. Dockerfile
-
-```dockerfile
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-FROM node:20-alpine
-WORKDIR /app
-COPY --from=builder /app/node_modules ./node_modules
-COPY . .
-USER node
-EXPOSE 3000
-CMD ["node", "src/index.js"]
-```
-
-### 2. cloudbuild.yaml
+### 1. cloudbuild.yaml
 
 ```yaml
 steps:
