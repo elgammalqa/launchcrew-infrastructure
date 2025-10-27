@@ -78,10 +78,8 @@ start_port_forward "influxdb" 8086 8086
 # Weaviate
 start_port_forward "weaviate" 8090 8080
 
-# Ray Cluster Dashboard
-start_port_forward "ray-cluster-dev-head-svc" 8265 8265
+# Ray - Client port only
 start_port_forward "ray-cluster-dev-head-svc" 10001 10001
-start_port_forward "ray-cluster-dev-head-svc" 6380 6379
 
 # KubeRay Operator
 start_port_forward "kuberay-operator" 8081 8080
@@ -105,9 +103,7 @@ echo -e "${YELLOW}NATS:${NC}            localhost:4222 (Client), localhost:8222 
 echo -e "${YELLOW}ClickHouse:${NC}      localhost:8123 (HTTP), localhost:9000 (Native)"
 echo -e "${YELLOW}InfluxDB:${NC}        localhost:8086"
 echo -e "${YELLOW}Weaviate:${NC}        localhost:8090"
-echo -e "${YELLOW}Ray Dashboard:${NC}   localhost:8265"
 echo -e "${YELLOW}Ray Client:${NC}      localhost:10001"
-echo -e "${YELLOW}Ray GCS:${NC}         localhost:6380"
 echo -e "${YELLOW}KubeRay Operator:${NC} localhost:8081"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
@@ -157,8 +153,6 @@ echo "export WEAVIATE_PORT=\"8090\""
 echo ""
 echo "# Ray"
 echo "export RAY_ADDRESS=\"ray://localhost:10001\""
-echo "export RAY_DASHBOARD_URL=\"http://localhost:8265\""
-echo "export RAY_GCS_ADDRESS=\"localhost:6380\""
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
