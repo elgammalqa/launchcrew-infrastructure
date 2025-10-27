@@ -10,9 +10,9 @@ global:
 nameOverride: 'ai'
 fullnameOverride: 'ai'
 
-# Ingress configuration
+# Ingress configuration - DISABLED
 ingress:
-  enabled: true
+  enabled: false
   redis:
     host: redis.local
   rabbitmq:
@@ -210,11 +210,11 @@ simpleServices:
       CLICKHOUSE_PASSWORD: 'clickhouse-dev-secret-2024'
     resources:
       requests:
-        memory: '128Mi'
-        cpu: '50m'
-      limits:
-        memory: '256Mi'
+        memory: '512Mi'
         cpu: '100m'
+      limits:
+        memory: '1Gi'
+        cpu: '200m'
 
   # Weaviate - Simple standalone (Latest stable: 1.27.0)
   weaviate:
@@ -255,9 +255,9 @@ simpleServices:
         memory: '128Mi'
         cpu: '50m'
 
-  # Docker Registry - Local container registry (Latest stable: 2.8)
+  # Docker Registry - Disabled (not needed for dev)
   registry:
-    enabled: true
+    enabled: false
     image: 'registry:2.8'
     port: 5000
     resources:
@@ -270,20 +270,20 @@ simpleServices:
 
 # Ray cluster configuration with minimal resources
 rayCluster:
-  enabled: false  # Disabled to allow scale to zero
+  enabled: true  # Enabled for testing new Ray version
   scaleToZero: true  # Enable KEDA scaling for Ray
   name: 'ray-cluster-dev'
   head:
     resources:
       requests:
-        memory: '128Mi'
-        cpu: '50m'
+        memory: '1Gi'
+        cpu: '500m'
       limits:
-        memory: '256Mi'
-        cpu: '100m'
+        memory: '2Gi'
+        cpu: '1'
     rayStartParams:
       dashboard-host: '0.0.0.0'
-      memory: '134217728'
+      memory: '1073741824'  # 1Gi in bytes
       num-cpus: '1'
   worker:
     replicas: 0
@@ -300,4 +300,4 @@ keda:
   enabled: true
   scalingMode: hybrid  # Cron for databases, HTTP traffic for web services
   httpAddOn:
-    enabled: true  # HTTP traffic-based scale-to-zero for web services
+    enabled: false  # Disabled HTTP traffic-based scaling since ingress is removed

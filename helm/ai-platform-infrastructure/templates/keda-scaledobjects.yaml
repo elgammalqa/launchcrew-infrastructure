@@ -22,47 +22,10 @@ spec:
       desiredReplicas: "1"
 {{- end }}
 ---
-# Databases use CRON-based scaling (TCP services)
-# PostgreSQL - Cron based (7 AM - 9 PM CST)
-apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
-metadata:
-  name: {{ include "ai-platform.fullname" . }}-postgresql-scaler
-  namespace: {{ .Values.global.namespace }}
-spec:
-  scaleTargetRef:
-    name: {{ include "ai-platform.fullname" . }}-postgresql
-  minReplicaCount: 0
-  maxReplicaCount: 1
-  cooldownPeriod: 300
-  triggers:
-  - type: cron
-    metadata:
-      timezone: America/Chicago
-      start: 0 7 * * *
-      end: 0 21 * * *
-      desiredReplicas: "1"
----
-# Redis - Cron based
-apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
-metadata:
-  name: {{ include "ai-platform.fullname" . }}-redis-scaler
-  namespace: {{ .Values.global.namespace }}
-spec:
-  scaleTargetRef:
-    name: {{ include "ai-platform.fullname" . }}-redis
-  minReplicaCount: 0
-  maxReplicaCount: 1
-  cooldownPeriod: 300
-  triggers:
-  - type: cron
-    metadata:
-      timezone: America/Chicago
-      start: 0 7 * * *
-      end: 0 21 * * *
-      desiredReplicas: "1"
----
+# Note: StatefulSets (PostgreSQL, Redis, Weaviate) cannot be scaled by KEDA cron triggers
+# They maintain persistent state and should remain running
+# Only Deployments (RabbitMQ, NATS) can be scaled down outside working hours
+
 # RabbitMQ - Cron based
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject

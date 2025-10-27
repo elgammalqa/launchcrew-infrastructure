@@ -78,9 +78,6 @@ start_port_forward "influxdb" 8086 8086
 # Weaviate
 start_port_forward "weaviate" 8090 8080
 
-# Registry
-start_port_forward "registry" 5000 5000
-
 # Ray Cluster Dashboard
 start_port_forward "ray-cluster-dev-head-svc" 8265 8265
 start_port_forward "ray-cluster-dev-head-svc" 10001 10001
@@ -108,7 +105,6 @@ echo -e "${YELLOW}NATS:${NC}            localhost:4222 (Client), localhost:8222 
 echo -e "${YELLOW}ClickHouse:${NC}      localhost:8123 (HTTP), localhost:9000 (Native)"
 echo -e "${YELLOW}InfluxDB:${NC}        localhost:8086"
 echo -e "${YELLOW}Weaviate:${NC}        localhost:8090"
-echo -e "${YELLOW}Registry:${NC}        localhost:5000"
 echo -e "${YELLOW}Ray Dashboard:${NC}   localhost:8265"
 echo -e "${YELLOW}Ray Client:${NC}      localhost:10001"
 echo -e "${YELLOW}Ray GCS:${NC}         localhost:6380"
@@ -158,11 +154,6 @@ echo "# Weaviate"
 echo "export WEAVIATE_URL=\"http://localhost:8090\""
 echo "export WEAVIATE_HOST=\"localhost\""
 echo "export WEAVIATE_PORT=\"8090\""
-echo ""
-echo "# Docker Registry"
-echo "export REGISTRY_URL=\"http://localhost:5000\""
-echo "export REGISTRY_HOST=\"localhost\""
-echo "export REGISTRY_PORT=\"5000\""
 echo ""
 echo "# Ray"
 echo "export RAY_ADDRESS=\"ray://localhost:10001\""
