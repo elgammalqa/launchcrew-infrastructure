@@ -268,32 +268,47 @@ simpleServices:
         memory: '128Mi'
         cpu: '50m'
 
-# Ray cluster configuration with minimal resources
+# Ray cluster configuration for AI Platform
 rayCluster:
-  enabled: true  # Enabled for testing new Ray version
+  enabled: true
   scaleToZero: true  # Enable KEDA scaling for Ray
   name: 'ray-cluster-dev'
+  
+  # Custom image with ai_platform package (update when ready)
+  image:
+    repository: 'rayproject/ray'  # TODO: Change to gcr.io/${GCP_PROJECT}/ray-ai-platform
+    tag: '2.47.1-py312'
+    pullPolicy: 'IfNotPresent'  # Change to Always when using custom image
+  
+  # Head node configuration
   head:
+    numCpus: '2'
     resources:
       requests:
-        memory: '1Gi'
-        cpu: '500m'
-      limits:
         memory: '2Gi'
         cpu: '1'
-    rayStartParams:
-      dashboard-host: '0.0.0.0'
-      memory: '1073741824'  # 1Gi in bytes
-      num-cpus: '1'
+      limits:
+        memory: '4Gi'
+        cpu: '2'
+  
+  # Worker nodes configuration
   worker:
-    replicas: 0
+    replicas: 2
+    minReplicas: 1
+    maxReplicas: 5
+    numCpus: '2'
     resources:
       requests:
-        memory: '64Mi'
-        cpu: '25m'
+        memory: '2Gi'
+        cpu: '1'
       limits:
-        memory: '128Mi'
-        cpu: '50m'
+        memory: '4Gi'
+        cpu: '2'
+  
+  # Environment variables for AI providers (optional)
+  env:
+    openaiApiKey: false  # Set to true when secret is created
+    anthropicApiKey: false  # Set to true when secret is created
 
 # KEDA autoscaling configuration
 keda:

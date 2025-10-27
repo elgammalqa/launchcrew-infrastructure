@@ -11,20 +11,22 @@ metadata:
     app.kubernetes.io/part-of: ai-platform
 spec:
   # Ray version
-  rayVersion: '2.47.1-py312'
+  rayVersion: '2.47.1'
   
   # Head node configuration
   headGroupSpec:
+    serviceType: ClusterIP
     rayStartParams:
       dashboard-host: '0.0.0.0'
-      num-cpus: '1'
+      port: '6379'
+      num-cpus: '{{ .Values.rayCluster.head.numCpus }}'
       block: 'true'
     template:
       spec:
         containers:
         - name: ray-head
-          image: rayproject/ray:2.47.1-py312
-          imagePullPolicy: IfNotPresent
+          image: {{ .Values.rayCluster.image.repository }}:{{ .Values.rayCluster.image.tag }}
+          imagePullPolicy: {{ .Values.rayCluster.image.pullPolicy }}
           ports:
           - containerPort: 10001
             name: client
@@ -33,12 +35,46 @@ spec:
           - containerPort: 8265
             name: dashboard
           resources:
-            limits:
-              cpu: "1"
-              memory: "2Gi"
-            requests:
-              cpu: "500m"
-              memory: "1Gi"
+            {{- toYaml .Values.rayCluster.head.resources | nindent 12 }}
+          env:
+          - name: PYTHONPATH
+            value: "/app"
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: postgresql-secret
+                key: DATABASE_URL
+          - name: REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: redis-secret
+                key: REDIS_URL
+          - name: NATS_URL
+            value: "nats://nats.{{ .Values.global.namespace }}.svc.cluster.local:4222"
+          - name: RABBITMQ_URL
+            value: "amqp://rabbitmq.{{ .Values.global.namespace }}.svc.cluster.local:5672"
+          - name: WEAVIATE_URL
+            value: "http://weaviate.{{ .Values.global.namespace }}.svc.cluster.local:8080"
+          - name: CLICKHOUSE_URL
+            value: "http://clickhouse.{{ .Values.global.namespace }}.svc.cluster.local:8123"
+          - name: INFLUXDB_URL
+            value: "http://influxdb.{{ .Values.global.namespace }}.svc.cluster.local:8086"
+          {{- if .Values.rayCluster.env.openaiApiKey }}
+          - name: OPENAI_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: ai-platform-secrets
+                key: openai-api-key
+                optional: true
+          {{- end }}
+          {{- if .Values.rayCluster.env.anthropicApiKey }}
+          - name: ANTHROPIC_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: ai-platform-secrets
+                key: anthropic-api-key
+                optional: true
+          {{- end }}
           volumeMounts:
           - name: log-volume
             mountPath: /tmp/ray
@@ -48,26 +84,60 @@ spec:
   
   # Worker nodes configuration
   workerGroupSpecs:
-  - replicas: 1
-    minReplicas: 1
-    maxReplicas: 1
+  - replicas: {{ .Values.rayCluster.worker.replicas }}
+    minReplicas: {{ .Values.rayCluster.worker.minReplicas }}
+    maxReplicas: {{ .Values.rayCluster.worker.maxReplicas }}
     groupName: worker-group
     rayStartParams:
-      num-cpus: '1'
+      num-cpus: '{{ .Values.rayCluster.worker.numCpus }}'
       block: 'true'
     template:
       spec:
         containers:
         - name: ray-worker
-          image: rayproject/ray:2.47.1-py312
-          imagePullPolicy: IfNotPresent
+          image: {{ .Values.rayCluster.image.repository }}:{{ .Values.rayCluster.image.tag }}
+          imagePullPolicy: {{ .Values.rayCluster.image.pullPolicy }}
           resources:
-            limits:
-              cpu: "1"
-              memory: "2Gi"
-            requests:
-              cpu: "500m"
-              memory: "1Gi"
+            {{- toYaml .Values.rayCluster.worker.resources | nindent 12 }}
+          env:
+          - name: PYTHONPATH
+            value: "/app"
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: postgresql-secret
+                key: DATABASE_URL
+          - name: REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: redis-secret
+                key: REDIS_URL
+          - name: NATS_URL
+            value: "nats://nats.{{ .Values.global.namespace }}.svc.cluster.local:4222"
+          - name: RABBITMQ_URL
+            value: "amqp://rabbitmq.{{ .Values.global.namespace }}.svc.cluster.local:5672"
+          - name: WEAVIATE_URL
+            value: "http://weaviate.{{ .Values.global.namespace }}.svc.cluster.local:8080"
+          - name: CLICKHOUSE_URL
+            value: "http://clickhouse.{{ .Values.global.namespace }}.svc.cluster.local:8123"
+          - name: INFLUXDB_URL
+            value: "http://influxdb.{{ .Values.global.namespace }}.svc.cluster.local:8086"
+          {{- if .Values.rayCluster.env.openaiApiKey }}
+          - name: OPENAI_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: ai-platform-secrets
+                key: openai-api-key
+                optional: true
+          {{- end }}
+          {{- if .Values.rayCluster.env.anthropicApiKey }}
+          - name: ANTHROPIC_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: ai-platform-secrets
+                key: anthropic-api-key
+                optional: true
+          {{- end }}
           volumeMounts:
           - name: log-volume
             mountPath: /tmp/ray
