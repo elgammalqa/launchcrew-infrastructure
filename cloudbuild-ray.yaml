@@ -1,0 +1,50 @@
+steps:
+  # Build Ray AI Platform image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'docker/ray-ai-platform.Dockerfile'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ray-ai-platform:$SHORT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ray-ai-platform:latest'
+      - '.'
+    id: 'build-ray-image'
+
+  # Push images
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/ray-ai-platform:$SHORT_SHA'
+    id: 'push-ray-sha'
+    waitFor: ['build-ray-image']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/ray-ai-platform:latest'
+    id: 'push-ray-latest'
+    waitFor: ['build-ray-image']
+
+  # Test the image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'run'
+      - '--rm'
+      - 'gcr.io/$PROJECT_ID/ray-ai-platform:$SHORT_SHA'
+      - 'python'
+      - '-c'
+      - 'import ray; import numpy; import pandas; print("✅ All imports successful"); print(f"Ray: {ray.__version__}"); print(f"NumPy: {numpy.__version__}"); print(f"Pandas: {pandas.__version__}")'
+    id: 'test-ray-image'
+    waitFor: ['push-ray-sha']
+
+images:
+  - 'gcr.io/$PROJECT_ID/ray-ai-platform:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/ray-ai-platform:latest'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '1800s'
