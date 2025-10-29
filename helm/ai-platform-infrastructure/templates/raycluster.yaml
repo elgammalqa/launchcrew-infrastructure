@@ -11,7 +11,7 @@ metadata:
     app.kubernetes.io/part-of: ai-platform
 spec:
   # Ray version
-  rayVersion: '2.47.1'
+  rayVersion: '2.49.0'
   
   # Head node configuration
   headGroupSpec:

@@ -274,11 +274,11 @@ rayCluster:
   scaleToZero: true  # Enable KEDA scaling for Ray
   name: 'ray-cluster-dev'
   
-  # Custom image with ai_platform package and NumPy fix
+  # Official Ray image with Python 3.11
   image:
-    repository: 'gcr.io/alien-drake-474816-a2/ray-ai-platform'
-    tag: 'dev'
-    pullPolicy: 'Always'
+    repository: 'rayproject/ray'
+    tag: '2.49.0-py311'
+    pullPolicy: 'IfNotPresent'
   
   # Head node configuration
   head:
