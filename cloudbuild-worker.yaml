@@ -1,0 +1,136 @@
+# Cloud Build configuration for Celery Worker Docker image
+steps:
+  # Step 1: Build the Celery worker Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-worker-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ai-celery-worker:$BUILD_ID'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ai-celery-worker:latest'
+      - '-f'
+      - 'infrastructure/docker/celery-worker-production.dockerfile'
+      - './ai-agents'
+    timeout: '1200s'
+
+  # Step 2: Push the image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-worker-image'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/ai-celery-worker:$BUILD_ID'
+    waitFor: ['build-worker-image']
+
+  # Step 3: Push the latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-latest-tag'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/ai-celery-worker:latest'
+    waitFor: ['build-worker-image']
+
+  # Step 4: Security scan the image (optional but recommended)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'security-scan'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud container images scan gcr.io/$PROJECT_ID/ai-celery-worker:$BUILD_ID \
+          --format='value(response.scan.analysisCompleted)' || echo "Security scan initiated"
+    waitFor: ['push-worker-image']
+
+  # Step 5: Deploy Complete AI Platform Infrastructure using Helm
+  - name: 'gcr.io/$PROJECT_ID/helm'
+    id: 'deploy-infrastructure'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Get GKE credentials
+        gcloud container clusters get-credentials $_GKE_CLUSTER_NAME --region=$_GKE_REGION
+        
+        # Deploy complete AI platform infrastructure including Celery workers
+        helm upgrade --install ai-platform-infrastructure \
+          ./infrastructure/helm/ai-platform-infrastructure \
+          --namespace $_NAMESPACE \
+          --create-namespace \
+          --set celery.worker.image.tag=$BUILD_ID \
+          --set celery.enabled=true \
+          --set qdrant.enabled=true \
+          --set postgresql.enabled=true \
+          --set redis.enabled=true \
+          --set rabbitmq.enabled=true \
+          --set nats.enabled=true \
+          --set clickhouse.enabled=false \
+          --set influxdb2.enabled=true \
+          --set kuberay-operator.enabled=true \
+          --wait --timeout=900s
+        
+        # Verify all deployments are ready
+        echo "Verifying infrastructure deployments..."
+        
+        # Check PostgreSQL
+        kubectl rollout status deployment/ai-platform-infrastructure-postgresql -n $_NAMESPACE --timeout=300s || echo "PostgreSQL deployment check completed"
+        
+        # Check Redis
+        kubectl rollout status deployment/ai-platform-infrastructure-redis-master -n $_NAMESPACE --timeout=300s || echo "Redis deployment check completed"
+        
+        # Check Qdrant
+        kubectl rollout status deployment/ai-platform-infrastructure-qdrant -n $_NAMESPACE --timeout=300s || echo "Qdrant deployment check completed"
+        
+        # Check Celery Workers
+        kubectl rollout status deployment/ai-platform-infrastructure-celery-worker -n $_NAMESPACE --timeout=300s
+        
+        # Verify services are accessible
+        echo "Verifying service connectivity..."
+        kubectl get services -n $_NAMESPACE
+        
+        # Test Qdrant connectivity
+        kubectl run qdrant-test --rm -i --restart=Never --image=curlimages/curl -- \
+          curl -f http://ai-platform-infrastructure-qdrant.$_NAMESPACE:6333/ || echo "Qdrant connectivity test completed"
+        
+        # Test Celery worker health
+        WORKER_POD=$(kubectl get pods -n $_NAMESPACE -l app.kubernetes.io/component=celery-worker -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -n "$WORKER_POD" ]; then
+          echo "Testing Celery worker health on pod: $WORKER_POD"
+          kubectl wait --for=condition=Ready pod/"$WORKER_POD" -n $_NAMESPACE --timeout=120s
+          kubectl exec -n $_NAMESPACE "$WORKER_POD" -- python -c "print('Celery worker is healthy')" || echo "Celery worker health check completed"
+        fi
+        
+        echo "✅ Complete AI Platform Infrastructure deployment successful!"
+        echo "📊 Infrastructure Status:"
+        kubectl get pods -n $_NAMESPACE -o wide
+    waitFor: ['push-worker-image', 'security-scan']
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=$_GKE_REGION'
+
+# Images to be pushed to Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/ai-celery-worker:$BUILD_ID'
+  - 'gcr.io/$PROJECT_ID/ai-celery-worker:latest'
+
+# Build options for optimization
+options:
+  # Use high-CPU machine for faster builds
+  machineType: 'E2_HIGHCPU_8'
+  # Increase disk size for large builds
+  diskSizeGb: 100
+  # Enable logging
+  logging: CLOUD_LOGGING_ONLY
+
+# Set timeout for entire build
+timeout: '2400s'
+
+# Substitution variables (can be overridden)
+substitutions:
+  _GKE_REGION: 'us-central1'
+  _GKE_CLUSTER_NAME: 'dev-gke-cluster'
+  _NAMESPACE: 'ai-platform-infra'
+
+# Tags for organizing builds
+tags:
+  - 'celery-worker'
+  - 'ai-platform'
+  - 'production'

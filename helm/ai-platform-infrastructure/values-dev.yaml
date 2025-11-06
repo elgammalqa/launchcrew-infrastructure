@@ -21,14 +21,16 @@ ingress:
     host: nats.local
   clickhouse:
     host: clickhouse.local
-  weaviate:
-    host: weaviate.local
+  qdrant:
+    host: qdrant.local
   influxdb:
     host: influxdb.local
   registry:
     host: registry.local
   ray:
     host: ray.local
+  flower:
+    host: flower.local
 
 # Secrets configuration for all services
 secrets:
@@ -56,11 +58,14 @@ secrets:
     bucket: 'metrics'
     token: 'influxdb-dev-token-2024'
 
-  weaviate:
-    apiKey: 'weaviate-dev-key-2024'
+  qdrant:
+    apiKey: 'qdrant-dev-key-2024'
 
   registry:
     httpSecret: 'registry-dev-secret-2024'
+
+  celery:
+    flowerAuth: 'admin:flower-dev-secret-2024'
 
 # Disable all complex Helm chart dependencies
 postgresql:
@@ -78,7 +83,7 @@ nats:
 clickhouse:
   enabled: false
 
-weaviate:
+qdrant:
   enabled: false
 
 influxdb2:
@@ -87,7 +92,7 @@ influxdb2:
 # Enable KubeRay Operator with minimal resources
 kuberay-operator:
   enabled: true
-  scaleToZero: true  # Enable KEDA scaling
+  scaleToZero: false  # Disable KEDA scaling
   resources:
     limits:
       cpu: 50m
@@ -121,7 +126,7 @@ persistence:
   clickhouse:
     size: '2Gi'
     accessMode: 'ReadWriteOnce'
-  weaviate:
+  qdrant:
     size: '1Gi'
     accessMode: 'ReadWriteOnce'
   influxdb:
@@ -199,7 +204,7 @@ simpleServices:
 
   # ClickHouse - Simple standalone (Latest stable: 24.10-alpine)
   clickhouse:
-    enabled: true
+    enabled: false
     image: 'clickhouse/clickhouse-server:24.10-alpine'
     ports:
       http: 8123
@@ -216,17 +221,15 @@ simpleServices:
         memory: '1Gi'
         cpu: '200m'
 
-  # Weaviate - Simple standalone (Latest stable: 1.27.0)
-  weaviate:
+  # Qdrant - Simple standalone (Latest stable: v1.11.0)
+  qdrant:
     enabled: true
-    image: 'semitechnologies/weaviate:1.27.0'
-    port: 8080
+    image: 'qdrant/qdrant:v1.11.0'
+    port: 6333
     env:
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      DEFAULT_VECTORIZER_MODULE: 'none'
-      ENABLE_MODULES: ''
-      CLUSTER_HOSTNAME: 'node1'
+      QDRANT__SERVICE__HTTP_PORT: '6333'
+      QDRANT__SERVICE__GRPC_PORT: '6334'
+      QDRANT__LOG_LEVEL: 'INFO'
     resources:
       requests:
         memory: '128Mi'
@@ -271,7 +274,7 @@ simpleServices:
 # Ray cluster configuration for AI Platform
 rayCluster:
   enabled: true
-  scaleToZero: true  # Enable KEDA scaling for Ray
+  scaleToZero: false  # Disable KEDA scaling for Ray
   name: 'ray-cluster-dev'
   
   # Official Ray image with Python 3.11
@@ -310,17 +313,158 @@ rayCluster:
     openaiApiKey: false  # Set to true when secret is created
     anthropicApiKey: false  # Set to true when secret is created
 
-# KEDA autoscaling configuration
+# Celery distributed task queue configuration
+celery:
+  # Broker configuration - use either 'redis' or 'rabbitmq'
+  broker: 'redis'  # Options: 'redis', 'rabbitmq'
+  brokerUrl: 'redis://:redis-dev-secret-2024@redis:6379/0'
+  resultBackend: 'redis://:redis-dev-secret-2024@redis:6379/0'
+  app: 'src.core.infrastructure.queue.celery_app'  # Full module path to Celery app
+  
+  # Celery Worker configuration
+  worker:
+    enabled: true
+    replicas: 2
+    image:
+      repository: 'gcr.io/alien-drake-474816-a2/ai-celery-worker'
+      tag: 'latest'
+    resources:
+      requests:
+        memory: '512Mi'
+        cpu: '250m'
+      limits:
+        memory: '2Gi'
+        cpu: '1000m'
+    env:
+      PYTHONPATH: '/app'
+      C_FORCE_ROOT: '1'
+      LOG_LEVEL: 'INFO'
+      DATABASE_URL: 'postgresql+asyncpg://postgres:postgres-dev-secret-2024@postgresql:5432/ai_platform_dev'
+      REDIS_URL: 'redis://:redis-dev-secret-2024@redis:6379/0'
+      NATS_URL: 'nats://nats:4222'
+      RABBITMQ_URL: 'amqp://admin:rabbitmq-dev-secret-2024@rabbitmq:5672'
+      QDRANT_URL: 'http://ai-qdrant:6333'
+      INFLUXDB_URL: 'http://influxdb:8086'
+      SKIP_DATABASE_CHECK: 'true'
+      DISABLE_STARTUP_CHECKS: 'true'
+      SKIP_DB_HEALTH_CHECK: 'true'
+    envFrom: []
+    workingDir: '/app'
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 30
+      periodSeconds: 60
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    volumeMounts: []
+    volumes: []
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    # KEDA autoscaling based on queue length
+    autoscaling:
+      enabled: false  # Disabled for dev environment
+      minReplicas: 1
+      maxReplicas: 10
+      cooldownPeriod: 300
+      queueName: 'celery'  # Default Celery queue name
+      queueLength: 5  # Scale up when queue has more than 5 tasks
+  
+  # Celery Beat (scheduler) configuration
+  beat:
+    enabled: true
+    image:
+      repository: 'gcr.io/alien-drake-474816-a2/ai-celery-worker'
+      tag: 'latest'
+    resources:
+      requests:
+        memory: '256Mi'
+        cpu: '100m'
+      limits:
+        memory: '512Mi'
+        cpu: '200m'
+    env:
+      PYTHONPATH: '/app'
+      C_FORCE_ROOT: '1'
+      LOG_LEVEL: 'INFO'
+      DATABASE_URL: 'postgresql+asyncpg://postgres:postgres-dev-secret-2024@postgresql:5432/ai_platform_dev'
+      REDIS_URL: 'redis://:redis-dev-secret-2024@redis:6379/0'
+      NATS_URL: 'nats://nats:4222'
+      RABBITMQ_URL: 'amqp://admin:rabbitmq-dev-secret-2024@rabbitmq:5672'
+      QDRANT_URL: 'http://ai-qdrant:6333'
+      INFLUXDB_URL: 'http://influxdb:8086'
+      SKIP_DATABASE_CHECK: 'true'
+      DISABLE_STARTUP_CHECKS: 'true'
+      SKIP_DB_HEALTH_CHECK: 'true'
+    envFrom: []
+    workingDir: '/app'
+    volumeMounts: []
+    volumes: []
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+  
+  # Celery Flower (monitoring) configuration
+  flower:
+    enabled: true
+    replicas: 1
+    port: 5555
+    image:
+      repository: 'mher/flower'
+      tag: '2.0.1'
+    command: 
+      - /bin/sh
+    args: 
+      - -c
+      - 'exec celery flower --broker=${CELERY_BROKER_URL} --port=5555'
+    service:
+      type: 'ClusterIP'
+      port: 5555
+    resources:
+      requests:
+        memory: '64Mi'
+        cpu: '25m'
+      limits:
+        memory: '128Mi'
+        cpu: '50m'
+    env:
+      FLOWER_BASIC_AUTH: 'admin:flower-dev-secret-2024'
+    envFrom: []
+    livenessProbe:
+      enabled: false
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readinessProbe:
+      enabled: false
+      initialDelaySeconds: 15
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    volumeMounts: []
+    volumes: []
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+# KEDA autoscaling configuration - DISABLED
 keda:
-  enabled: true
+  enabled: false
   scalingMode: hybrid  # Cron for databases, HTTP traffic for web services
   httpAddOn:
     enabled: false  # Disabled HTTP traffic-based scaling since ingress is removed
 
-# Auto-scaling configuration using CronJobs
+# Auto-scaling configuration using CronJobs - DISABLED
 # This scales ALL infrastructure (including StatefulSets) to 0 outside working hours
 autoScaling:
-  enabled: true
+  enabled: false
   timezone: 'America/Chicago'
   scaleDown:
     schedule: '0 21 * * *'  # 9 PM CST - Scale down to 0

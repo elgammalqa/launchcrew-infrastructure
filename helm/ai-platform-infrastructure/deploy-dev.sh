@@ -45,5 +45,5 @@ echo "   - Redis: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-redis
 echo "   - RabbitMQ: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-rabbitmq 15672:15672"
 echo "   - NATS: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-nats 4222:4222"
 echo "   - ClickHouse: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-clickhouse 8123:8123"
-echo "   - Weaviate: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-weaviate 8080:8080"
+echo "   - Qdrant: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-qdrant 6333:6333"
 echo "   - InfluxDB: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-influxdb2 8086:8086"

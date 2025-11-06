@@ -23,7 +23,7 @@ imagePull:
     - "rabbitmq:3.13-management"
     - "nats:2.10.20"
     - "clickhouse/clickhouse-server:24.8"
-    - "weaviate/weaviate:1.26.1"
+    - "qdrant/qdrant:v1.11.0"
     - "influxdb:2.7"
     - "kuberay/operator:v1.2.2"
     - "rayproject/ray:2.47.1-py312"
@@ -128,21 +128,25 @@ clickhouse:
   shards: 0  # No shards for dev
   replicaCount: 0  # No replicas for dev
 
-# Weaviate Configuration - Using Official Weaviate Image
-weaviate:
+# Qdrant Configuration - Using Official Qdrant Image
+qdrant:
   enabled: true
-  # CRITICAL: Override with official Weaviate image
+  # CRITICAL: Override with official Qdrant image
   image:
     registry: docker.io
-    repository: weaviate/weaviate
-    tag: "1.26.1"
+    repository: qdrant/qdrant
+    tag: "v1.11.0"
     pullPolicy: IfNotPresent
   persistence:
     enabled: false  # Disabled for dev
     size: 20Gi
-  authentication:
-    anonymous_access:
-      enabled: true  # Allow anonymous access for dev
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
   # Dev environment configuration
   replicas: 0  # No replicas for dev
 
@@ -172,3 +176,7 @@ kuberay-operator:
   
 # Note: Ray clusters are created separately via RayCluster CRDs
 # The operator just manages the lifecycle of Ray clusters
+
+# Celery Configuration - Disabled by default, enabled in values-dev.yaml
+celery:
+  enabled: false

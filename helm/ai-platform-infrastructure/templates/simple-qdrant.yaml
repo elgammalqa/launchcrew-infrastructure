@@ -1,0 +1,88 @@
+{{- if and .Values.simpleServices (and .Values.simpleServices.qdrant .Values.simpleServices.qdrant.enabled) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-qdrant
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: qdrant
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: qdrant
+    spec:
+      containers:
+      - name: qdrant
+        image: {{ .Values.simpleServices.qdrant.image }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.simpleServices.qdrant.port }}
+          protocol: TCP
+        - name: grpc
+          containerPort: 6334
+          protocol: TCP
+        env:
+        {{- range $key, $value := .Values.simpleServices.qdrant.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.simpleServices.qdrant.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: qdrant-storage
+          mountPath: /qdrant/storage
+      volumes:
+      - name: qdrant-storage
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-qdrant
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.simpleServices.qdrant.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: 6334
+    targetPort: grpc
+    protocol: TCP
+    name: grpc
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: qdrant
+
+
+{{- end }}

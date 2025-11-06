@@ -64,12 +64,12 @@ kubectl create secret generic influxdb-secret \
   --from-literal=INFLUXDB_URL="http://influxdb:8086" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Weaviate Secret
-echo "🔍 Creating Weaviate secret..."
-kubectl create secret generic weaviate-secret \
+# Qdrant Secret
+echo "🔍 Creating Qdrant secret..."
+kubectl create secret generic qdrant-secret \
   --namespace=$NAMESPACE \
-  --from-literal=WEAVIATE_API_KEY="weaviate-dev-key-2024" \
-  --from-literal=WEAVIATE_URL="http://weaviate:8080" \
+  --from-literal=QDRANT_API_KEY="qdrant-dev-key-2024" \
+  --from-literal=QDRANT_URL="http://qdrant:6333" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Docker Registry Secret

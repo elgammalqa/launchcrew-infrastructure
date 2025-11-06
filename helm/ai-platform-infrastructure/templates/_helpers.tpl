@@ -49,3 +49,57 @@ Selector labels
 app.kubernetes.io/name: {{ include "ai-platform.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "ai-platform-infrastructure.serviceAccountName" -}}
+{{- if .Values.celery.serviceAccount.create }}
+{{- default (include "ai-platform-infrastructure.fullname" .) .Values.celery.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.celery.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/*
+AI Platform Infrastructure name
+*/}}
+{{- define "ai-platform-infrastructure.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+AI Platform Infrastructure fullname
+*/}}
+{{- define "ai-platform-infrastructure.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+AI Platform Infrastructure labels
+*/}}
+{{- define "ai-platform-infrastructure.labels" -}}
+helm.sh/chart: {{ include "ai-platform.chart" . }}
+{{ include "ai-platform-infrastructure.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+AI Platform Infrastructure selector labels
+*/}}
+{{- define "ai-platform-infrastructure.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ai-platform-infrastructure.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

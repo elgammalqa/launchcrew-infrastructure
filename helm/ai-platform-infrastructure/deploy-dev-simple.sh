@@ -18,12 +18,14 @@ helm uninstall $RELEASE_NAME -n $NAMESPACE 2>/dev/null || true
 # Wait for cleanup
 sleep 5
 
-# Deploy all infrastructure services with KubeRay operator
+# Deploy all infrastructure services including Celery and Qdrant
 echo "🔧 Deploying all infrastructure services..."
 helm install $RELEASE_NAME $CHART_PATH \
   --namespace $NAMESPACE \
   --create-namespace \
   --values values-dev.yaml \
+  --set celery.enabled=true \
+  --set qdrant.enabled=true \
   --timeout 15m \
   --wait
 
@@ -31,12 +33,14 @@ helm install $RELEASE_NAME $CHART_PATH \
 echo "⏳ Waiting for KubeRay operator to be ready..."
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kuberay-operator -n $NAMESPACE --timeout=120s || true
 
-# Enable Ray cluster with upgrade
+# Enable Ray cluster with upgrade (keeping Celery and Qdrant enabled)
 echo "🔧 Enabling Ray cluster..."
 helm upgrade $RELEASE_NAME $CHART_PATH \
   --namespace $NAMESPACE \
   --values values-dev.yaml \
   --set rayCluster.enabled=true \
+  --set celery.enabled=true \
+  --set qdrant.enabled=true \
   --timeout 15m \
   --wait
 
@@ -95,8 +99,23 @@ check_service_health "nats" "4222"
 # Check ClickHouse
 check_service_health "clickhouse" "8123"
 
-# Check Weaviate
-check_service_health "weaviate" "8080"
+# Check Qdrant
+check_service_health "qdrant" "6333"
+
+# Check Celery Workers
+echo "🔍 Checking Celery workers health..."
+if kubectl get pods -n $NAMESPACE -l app.kubernetes.io/component=celery-worker | grep -q "Running"; then
+  echo "  ✅ Celery worker pods are running"
+  
+  # Test Celery worker connectivity
+  WORKER_POD=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/component=celery-worker -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  if [ -n "$WORKER_POD" ]; then
+    echo "  🔍 Testing Celery worker health on pod: $WORKER_POD"
+    kubectl exec -n $NAMESPACE "$WORKER_POD" -- python -c "print('Celery worker is healthy')" 2>/dev/null && echo "  ✅ Celery worker health check passed" || echo "  ⚠️  Celery worker health check failed"
+  fi
+else
+  echo "  ❌ Celery worker pods are not running"
+fi
 
 # Check InfluxDB
 check_service_health "influxdb" "8086"
@@ -139,15 +158,16 @@ echo "   - Ray cluster deployed (may need additional startup time)"
 echo "   - No clustering, no replication, ephemeral storage"
 echo ""
 echo "🔗 Service connection commands:"
-echo "   PostgreSQL:  kubectl port-forward -n $NAMESPACE svc/postgresql 5432:5432"
-echo "   Redis:       kubectl port-forward -n $NAMESPACE svc/redis 6379:6379"
-echo "   RabbitMQ:    kubectl port-forward -n $NAMESPACE svc/rabbitmq 15672:15672"
-echo "   NATS:        kubectl port-forward -n $NAMESPACE svc/nats 4222:4222"
-echo "   ClickHouse:  kubectl port-forward -n $NAMESPACE svc/clickhouse 8123:8123"
-echo "   Weaviate:    kubectl port-forward -n $NAMESPACE svc/weaviate 8080:8080"
-echo "   InfluxDB:    kubectl port-forward -n $NAMESPACE svc/influxdb 8086:8086"
-echo "   Registry:    kubectl port-forward -n $NAMESPACE svc/registry 5000:5000"
+echo "   PostgreSQL:  kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-postgresql 5432:5432"
+echo "   Redis:       kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-redis-master 6379:6379"
+echo "   RabbitMQ:    kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-rabbitmq 15672:15672"
+echo "   NATS:        kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-nats 4222:4222"
+echo "   ClickHouse:  kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-clickhouse 8123:8123"
+echo "   Qdrant:      kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-qdrant 6333:6333"
+echo "   InfluxDB:    kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-influxdb2 8086:8086"
+echo "   Registry:    kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-registry 5000:5000"
 echo "   Ray Dashboard: kubectl port-forward -n $NAMESPACE svc/ray-cluster-dev-head-svc 8265:8265"
+echo "   Celery Monitor: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-celery-worker 5555:5555"
 echo ""
 echo "🐳 Docker Registry Usage:"
 echo "   Tag image:   docker tag myapp:latest localhost:5000/myapp:latest"

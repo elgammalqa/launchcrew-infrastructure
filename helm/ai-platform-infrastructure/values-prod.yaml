@@ -15,7 +15,7 @@ imagePull:
     - "rabbitmq:3.13-management"
     - "nats:2.10.20"
     - "clickhouse/clickhouse-server:24.8"
-    - "weaviate/weaviate:1.26.1"
+    - "qdrant/qdrant:v1.11.0"
     - "influxdb:2.7"
 
 # PostgreSQL - High Availability with read replicas
@@ -207,14 +207,14 @@ clickhouse:
     enabled: true
     replicaCount: 3
 
-# Weaviate - Multi-replica with backup
-weaviate:
+# Qdrant - Multi-replica with backup
+qdrant:
   enabled: true
-  # CRITICAL: Use official Weaviate image
+  # CRITICAL: Use official Qdrant image
   image:
     registry: docker.io
-    repository: weaviate/weaviate
-    tag: "1.26.1"
+    repository: qdrant/qdrant
+    tag: "v1.11.0"
     pullPolicy: IfNotPresent
   replicas: 3
   persistence:
@@ -229,9 +229,6 @@ weaviate:
       cpu: "2000m"
   # Pod anti-affinity for HA
   podAntiAffinityPreset: hard
-  authentication:
-    anonymous_access:
-      enabled: false
   # Enable backup
   backup:
     enabled: true

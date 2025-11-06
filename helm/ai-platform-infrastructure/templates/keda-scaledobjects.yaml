@@ -22,7 +22,7 @@ spec:
       desiredReplicas: "1"
 {{- end }}
 ---
-# Note: StatefulSets (PostgreSQL, Redis, Weaviate) cannot be scaled by KEDA cron triggers
+# Note: StatefulSets (PostgreSQL, Redis, Qdrant) cannot be scaled by KEDA cron triggers
 # They maintain persistent state and should remain running
 # Only Deployments (RabbitMQ, NATS) can be scaled down outside working hours
 
@@ -65,4 +65,38 @@ spec:
       start: 0 7 * * *
       end: 0 21 * * *
       desiredReplicas: "1"
+{{- end }}
+---
+# Celery Worker - Queue-based scaling with RabbitMQ/Redis
+{{- if and .Values.keda.enabled .Values.celery.worker.enabled .Values.celery.worker.autoscaling.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-celery-worker-scaler
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    name: {{ include "ai-platform.fullname" . }}-celery-worker
+  minReplicaCount: {{ .Values.celery.worker.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.celery.worker.autoscaling.maxReplicas }}
+  cooldownPeriod: {{ .Values.celery.worker.autoscaling.cooldownPeriod }}
+  triggers:
+  {{- if eq .Values.celery.broker "rabbitmq" }}
+  - type: rabbitmq
+    metadata:
+      protocol: amqp
+      host: {{ include "ai-platform.fullname" . }}-rabbitmq:5672
+      queueName: {{ .Values.celery.worker.autoscaling.queueName }}
+      queueLength: "{{ .Values.celery.worker.autoscaling.queueLength }}"
+    authenticationRef:
+      name: {{ include "ai-platform.fullname" . }}-celery-rabbitmq-auth
+  {{- else if eq .Values.celery.broker "redis" }}
+  - type: redis
+    metadata:
+      address: {{ include "ai-platform.fullname" . }}-redis:6379
+      listName: {{ .Values.celery.worker.autoscaling.queueName }}
+      listLength: "{{ .Values.celery.worker.autoscaling.queueLength }}"
+    authenticationRef:
+      name: {{ include "ai-platform.fullname" . }}-celery-redis-auth
+  {{- end }}
 {{- end }}

@@ -18,7 +18,7 @@ show_help() {
     echo "  rabbitmq      Get RabbitMQ connection details"
     echo "  clickhouse    Get ClickHouse connection details"
     echo "  influxdb      Get InfluxDB connection details"
-    echo "  weaviate      Get Weaviate connection details"
+    echo "  qdrant        Get Qdrant connection details"
     echo "  registry      Get Docker Registry details"
     echo "  nats          Get NATS connection details"
     echo "  ray           Get Ray cluster details"
@@ -81,10 +81,10 @@ show_influxdb() {
     echo ""
 }
 
-show_weaviate() {
-    echo "🔍 Weaviate:"
-    echo "  API Key: $(get_secret weaviate-secret WEAVIATE_API_KEY)"
-    echo "  URL:     $(get_secret weaviate-secret WEAVIATE_URL)"
+show_qdrant() {
+    echo "🔍 Qdrant:"
+    echo "  API Key: $(get_secret qdrant-secret QDRANT_API_KEY)"
+    echo "  URL:     $(get_secret qdrant-secret QDRANT_URL)"
     echo ""
 }
 
@@ -141,9 +141,9 @@ show_env_format() {
     echo "INFLUXDB_TOKEN=$(get_secret influxdb-secret DOCKER_INFLUXDB_INIT_ADMIN_TOKEN)"
     echo "INFLUXDB_URL=$(get_secret influxdb-secret INFLUXDB_URL)"
     echo ""
-    echo "# Weaviate"
-    echo "WEAVIATE_API_KEY=$(get_secret weaviate-secret WEAVIATE_API_KEY)"
-    echo "WEAVIATE_URL=$(get_secret weaviate-secret WEAVIATE_URL)"
+    echo "# Qdrant"
+    echo "QDRANT_API_KEY=$(get_secret qdrant-secret QDRANT_API_KEY)"
+    echo "QDRANT_URL=$(get_secret qdrant-secret QDRANT_URL)"
     echo ""
     echo "# Docker Registry"
     echo "REGISTRY_HTTP_SECRET=$(get_secret registry-secret REGISTRY_HTTP_SECRET)"
@@ -173,8 +173,8 @@ case "${1:-help}" in
     influxdb)
         show_influxdb
         ;;
-    weaviate)
-        show_weaviate
+    qdrant)
+        show_qdrant
         ;;
     registry)
         show_registry
@@ -191,7 +191,7 @@ case "${1:-help}" in
         show_rabbitmq
         show_clickhouse
         show_influxdb
-        show_weaviate
+        show_qdrant
         show_registry
         show_nats
         show_ray

@@ -12,6 +12,7 @@ PID_FILE="/tmp/ai-platform-port-forwards.pids"
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}🚀 Starting port forwarding for AI Platform Infrastructure${NC}"
@@ -38,76 +39,103 @@ cleanup() {
 # Trap to cleanup on script exit
 trap cleanup EXIT INT TERM
 
-# Start port forwarding
+# Check if service exists
+check_service() {
+    local service=$1
+    local resource_type=${2:-"svc"}
+    kubectl get ${resource_type}/${service} -n $NAMESPACE > /dev/null 2>&1
+}
+
+# Start port forwarding with error handling
 start_port_forward() {
     local service=$1
     local local_port=$2
     local remote_port=$3
     local resource_type=${4:-"svc"}
+    local description=${5:-"$service"}
     
-    echo -e "${YELLOW}📡 Forwarding ${resource_type}/${service}: localhost:${local_port} -> ${remote_port}${NC}"
-    kubectl port-forward -n $NAMESPACE ${resource_type}/${service} ${local_port}:${remote_port} > /dev/null 2>&1 &
-    echo $! >> "$PID_FILE"
-    sleep 0.5
+    if check_service "$service" "$resource_type"; then
+        echo -e "${YELLOW}📡 Forwarding ${description}: localhost:${local_port} -> ${resource_type}/${service}:${remote_port}${NC}"
+        kubectl port-forward -n $NAMESPACE ${resource_type}/${service} ${local_port}:${remote_port} > /dev/null 2>&1 &
+        echo $! >> "$PID_FILE"
+        sleep 0.5
+    else
+        echo -e "${RED}⚠️  Skipping ${description}: ${resource_type}/${service} not found${NC}"
+    fi
 }
 
 # Clean up first
 cleanup
 
+echo -e "${BLUE}🔍 Checking available services...${NC}"
+echo ""
+
 # PostgreSQL
-start_port_forward "postgresql" 5432 5432
+start_port_forward "postgresql" 5432 5432 "svc" "PostgreSQL Database"
 
 # Redis
-start_port_forward "redis" 6379 6379
+start_port_forward "redis" 6379 6379 "svc" "Redis Cache"
 
-# RabbitMQ
-start_port_forward "rabbitmq" 5672 5672
-start_port_forward "rabbitmq" 15672 15672
+# RabbitMQ (if available)
+start_port_forward "rabbitmq" 5672 5672 "svc" "RabbitMQ AMQP"
+start_port_forward "rabbitmq" 15672 15672 "svc" "RabbitMQ Management UI"
 
 # NATS
-start_port_forward "nats" 4222 4222
-start_port_forward "nats" 8222 8222
+start_port_forward "nats" 4222 4222 "svc" "NATS Client"
+start_port_forward "nats" 8222 8222 "svc" "NATS Monitoring"
 
-# ClickHouse
-start_port_forward "clickhouse" 8123 8123
-start_port_forward "clickhouse" 9000 9000
+# ClickHouse (if available)
+start_port_forward "clickhouse" 8123 8123 "svc" "ClickHouse HTTP"
+start_port_forward "clickhouse" 9000 9000 "svc" "ClickHouse Native"
 
-# InfluxDB
-start_port_forward "influxdb" 8086 8086
+# InfluxDB (if available)
+start_port_forward "influxdb" 8086 8086 "svc" "InfluxDB"
 
-# Weaviate
-start_port_forward "weaviate" 8090 8080
+# Qdrant
+start_port_forward "qdrant" 6333 6333 "svc" "Qdrant Vector DB"
 
-# Ray - Client port only
-start_port_forward "ray-cluster-dev-head-svc" 10001 10001
+# Ray - Multiple ports
+start_port_forward "ray-cluster-dev-head-svc" 10001 10001 "svc" "Ray Client"
+start_port_forward "ray-cluster-dev-head-svc" 8265 8265 "svc" "Ray Dashboard"
+start_port_forward "ray-cluster-dev-head-svc" 6379 6380 "svc" "Ray GCS"
 
 # KubeRay Operator
-start_port_forward "kuberay-operator" 8081 8080
+start_port_forward "kuberay-operator" 8081 8080 "svc" "KubeRay Operator"
 
 echo ""
-echo -e "${GREEN}✅ All port forwards started successfully!${NC}"
+echo -e "${GREEN}✅ Port forwarding setup complete!${NC}"
 echo ""
 
-# Get secrets
-POSTGRES_USER=$(kubectl get secret postgresql-secret -n $NAMESPACE -o jsonpath='{.data.POSTGRES_USER}' 2>/dev/null | base64 -d)
-POSTGRES_PASSWORD=$(kubectl get secret postgresql-secret -n $NAMESPACE -o jsonpath='{.data.POSTGRES_PASSWORD}' 2>/dev/null | base64 -d)
-POSTGRES_DB=$(kubectl get secret postgresql-secret -n $NAMESPACE -o jsonpath='{.data.POSTGRES_DB}' 2>/dev/null | base64 -d)
-REDIS_PASSWORD=$(kubectl get secret redis-secret -n $NAMESPACE -o jsonpath='{.data.REDIS_PASSWORD}' 2>/dev/null | base64 -d)
+# Get secrets safely
+get_secret() {
+    local secret_name=$1
+    local key=$2
+    kubectl get secret $secret_name -n $NAMESPACE -o jsonpath="{.data.$key}" 2>/dev/null | base64 -d 2>/dev/null || echo "N/A"
+}
+
+POSTGRES_USER=$(get_secret "postgresql-secret" "POSTGRES_USER")
+POSTGRES_PASSWORD=$(get_secret "postgresql-secret" "POSTGRES_PASSWORD")
+POSTGRES_DB=$(get_secret "postgresql-secret" "POSTGRES_DB")
+REDIS_PASSWORD=$(get_secret "redis-secret" "REDIS_PASSWORD")
 
 echo -e "${GREEN}📋 Service Access URLs:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "${YELLOW}PostgreSQL:${NC}      localhost:5432"
-echo -e "${YELLOW}Redis:${NC}           localhost:6379"
-echo -e "${YELLOW}RabbitMQ:${NC}        localhost:5672 (AMQP), localhost:15672 (Management UI)"
-echo -e "${YELLOW}NATS:${NC}            localhost:4222 (Client), localhost:8222 (Monitoring)"
-echo -e "${YELLOW}ClickHouse:${NC}      localhost:8123 (HTTP), localhost:9000 (Native)"
-echo -e "${YELLOW}InfluxDB:${NC}        localhost:8086"
-echo -e "${YELLOW}Weaviate:${NC}        localhost:8090"
-echo -e "${YELLOW}Ray Client:${NC}      localhost:10001"
+echo -e "${YELLOW}PostgreSQL:${NC}       localhost:5432"
+echo -e "${YELLOW}Redis:${NC}            localhost:6379"
+echo -e "${YELLOW}NATS:${NC}             localhost:4222 (Client), localhost:8222 (Monitoring)"
+echo -e "${YELLOW}Qdrant:${NC}           localhost:6333"
+echo -e "${YELLOW}Ray Client:${NC}       localhost:10001"
+echo -e "${YELLOW}Ray Dashboard:${NC}    http://localhost:8265"
+echo -e "${YELLOW}Ray GCS:${NC}          localhost:6380"
 echo -e "${YELLOW}KubeRay Operator:${NC} localhost:8081"
+echo ""
+echo -e "${RED}Services not running:${NC}"
+echo -e "${RED}• RabbitMQ:${NC}        localhost:5672 (AMQP), localhost:15672 (Management)"
+echo -e "${RED}• ClickHouse:${NC}      localhost:8123 (HTTP), localhost:9000 (Native)"
+echo -e "${RED}• InfluxDB:${NC}        localhost:8086"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo -e "${GREEN}🔗 Connection Strings (Environment Variables):${NC}"
+echo -e "${GREEN}🔗 Connection Strings (Copy & Paste):${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "# PostgreSQL"
@@ -124,43 +152,35 @@ echo "export REDIS_HOST=\"localhost\""
 echo "export REDIS_PORT=\"6379\""
 echo "export REDIS_PASSWORD=\"${REDIS_PASSWORD}\""
 echo ""
-echo "# RabbitMQ"
-echo "export RABBITMQ_URL=\"amqp://localhost:5672\""
-echo "export RABBITMQ_HOST=\"localhost\""
-echo "export RABBITMQ_PORT=\"5672\""
-echo "export RABBITMQ_MANAGEMENT_URL=\"http://localhost:15672\""
-echo ""
 echo "# NATS"
 echo "export NATS_URL=\"nats://localhost:4222\""
 echo "export NATS_HOST=\"localhost\""
 echo "export NATS_PORT=\"4222\""
+echo "export NATS_MONITORING_URL=\"http://localhost:8222\""
 echo ""
-echo "# ClickHouse"
-echo "export CLICKHOUSE_URL=\"http://localhost:8123\""
-echo "export CLICKHOUSE_HOST=\"localhost\""
-echo "export CLICKHOUSE_HTTP_PORT=\"8123\""
-echo "export CLICKHOUSE_NATIVE_PORT=\"9000\""
-echo ""
-echo "# InfluxDB"
-echo "export INFLUXDB_URL=\"http://localhost:8086\""
-echo "export INFLUXDB_HOST=\"localhost\""
-echo "export INFLUXDB_PORT=\"8086\""
-echo ""
-echo "# Weaviate"
-echo "export WEAVIATE_URL=\"http://localhost:8090\""
-echo "export WEAVIATE_HOST=\"localhost\""
-echo "export WEAVIATE_PORT=\"8090\""
+echo "# Qdrant"
+echo "export QDRANT_URL=\"http://localhost:6333\""
+echo "export QDRANT_HOST=\"localhost\""
+echo "export QDRANT_PORT=\"6333\""
 echo ""
 echo "# Ray"
 echo "export RAY_ADDRESS=\"ray://localhost:10001\""
+echo "export RAY_DASHBOARD_URL=\"http://localhost:8265\""
+echo "export RAY_GCS_ADDRESS=\"localhost:6380\""
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo -e "${GREEN}💡 Tips:${NC}"
+echo -e "${GREEN}💡 Usage Tips:${NC}"
 echo "  • Copy the export commands above to set environment variables"
+echo "  • Ray Dashboard: http://localhost:8265 (if Ray head pod is running)"
+echo "  • NATS Monitoring: http://localhost:8222"
 echo "  • Press Ctrl+C to stop all port forwards"
 echo "  • Port forwards run in background"
-echo "  • Check connection: curl http://localhost:8265 (Ray Dashboard)"
+echo ""
+echo -e "${BLUE}🔧 Troubleshooting:${NC}"
+echo "  • If Ray Dashboard doesn't work, check: kubectl get pods -n ai-platform-infra -l ray.io/node-type=head"
+echo "  • To restart Ray: kubectl delete raycluster ray-cluster-dev -n ai-platform-infra"
+echo "  • Check service status: kubectl get svc -n ai-platform-infra"
 echo ""
 echo -e "${YELLOW}⏳ Port forwards are running. Press Ctrl+C to stop...${NC}"
 echo ""

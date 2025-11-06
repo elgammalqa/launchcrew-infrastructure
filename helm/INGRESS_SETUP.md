@@ -13,7 +13,7 @@
 2. **AI Platform Ingress Resources** (namespace: `ai-platform-infra`)
    - RabbitMQ Management UI: `rabbitmq.local`
    - ClickHouse HTTP API: `clickhouse.local`
-   - Weaviate API: `weaviate.local`
+   - Qdrant API: `qdrant.local`
    - InfluxDB API: `influxdb.local`
    - Docker Registry: `registry.local`
    - Ray Dashboard: `ray.local`
@@ -36,7 +36,7 @@ kubectl port-forward -n ingress-nginx svc/nginx-ingress-ingress-nginx-controller
 # Access services with Host header
 curl -H "Host: test.local" http://localhost:8080
 curl -H "Host: rabbitmq.local" http://localhost:8080
-curl -H "Host: weaviate.local" http://localhost:8080/v1/meta
+curl -H "Host: qdrant.local" http://localhost:8080/
 ```
 
 ### Or use the helper script:
@@ -51,13 +51,13 @@ cd infrastructure/helm
 ### Option 1: Add to /etc/hosts
 
 ```bash
-echo '127.0.0.1 test.local rabbitmq.local clickhouse.local weaviate.local influxdb.local registry.local ray.local postgresql.local' | sudo tee -a /etc/hosts
+echo '127.0.0.1 test.local rabbitmq.local clickhouse.local qdrant.local influxdb.local registry.local ray.local postgresql.local' | sudo tee -a /etc/hosts
 ```
 
 Then access in browser:
 - http://test.local:8080
 - http://rabbitmq.local:8080
-- http://weaviate.local:8080
+- http://qdrant.local:8080
 
 ### Option 2: Use curl with Host header
 
@@ -73,7 +73,7 @@ curl -H "Host: test.local" http://localhost:8080
 |---------|------|------|-------------|
 | RabbitMQ Management | rabbitmq.local | 8080 | Web UI (guest:guest) |
 | ClickHouse | clickhouse.local | 8080 | HTTP API |
-| Weaviate | weaviate.local | 8080 | Vector DB API |
+| Qdrant | qdrant.local | 8080 | Vector DB API |
 | InfluxDB | influxdb.local | 8080 | Time Series DB UI |
 | Docker Registry | registry.local | 8080 | Container Registry |
 | Ray Dashboard | ray.local | 8080 | Distributed Computing UI |
@@ -120,7 +120,7 @@ curl -H "Host: test.local" http://localhost:8080
 curl -v -H "Host: test.local" http://localhost:8080
 
 # Test all hosts
-for host in test.local rabbitmq.local clickhouse.local weaviate.local; do
+for host in test.local rabbitmq.local clickhouse.local qdrant.local; do
   echo "Testing $host..."
   curl -s -H "Host: $host" http://localhost:8080 -o /dev/null -w "HTTP %{http_code}\n"
 done

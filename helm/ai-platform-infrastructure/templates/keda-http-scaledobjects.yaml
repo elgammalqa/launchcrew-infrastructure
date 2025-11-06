@@ -44,24 +44,24 @@ spec:
     min: 0
     max: 3
 ---
-# Weaviate - HTTP traffic based scale-to-zero
+# Qdrant - HTTP traffic based scale-to-zero
 apiVersion: http.keda.sh/v1alpha1
 kind: HTTPScaledObject
 metadata:
-  name: {{ include "ai-platform.fullname" . }}-weaviate-http
+  name: {{ include "ai-platform.fullname" . }}-qdrant-http
   namespace: {{ .Values.global.namespace }}
 spec:
   hosts:
-  - weaviate.{{ .Values.global.namespace }}.svc.cluster.local
-  - weaviate.local
+  - qdrant.{{ .Values.global.namespace }}.svc.cluster.local
+  - qdrant.local
   targetPendingRequests: 100
   scaledownPeriod: 300
   scaleTargetRef:
-    name: {{ include "ai-platform.fullname" . }}-weaviate
+    name: {{ include "ai-platform.fullname" . }}-qdrant
     kind: Deployment
     apiVersion: apps/v1
-    service: weaviate
-    port: 8080
+    service: qdrant
+    port: 6333
   replicas:
     min: 0
     max: 3

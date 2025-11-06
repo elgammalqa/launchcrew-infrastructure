@@ -99,9 +99,9 @@ spec:
               kubectl scale statefulset {{ include "ai-platform.fullname" . }}-redis -n $NAMESPACE --replicas=0 || true
               echo "  ✓ Redis scaled to 0"
               {{- end }}
-              {{- if and .Values.simpleServices.weaviate .Values.simpleServices.weaviate.enabled }}
-              kubectl scale statefulset {{ include "ai-platform.fullname" . }}-weaviate -n $NAMESPACE --replicas=0 || true
-              echo "  ✓ Weaviate scaled to 0"
+              {{- if and .Values.simpleServices.qdrant .Values.simpleServices.qdrant.enabled }}
+              kubectl scale statefulset {{ include "ai-platform.fullname" . }}-qdrant -n $NAMESPACE --replicas=0 || true
+              echo "  ✓ Qdrant scaled to 0"
               {{- end }}
               
               # Scale down Deployments (KEDA will handle these, but we do it explicitly for safety)
@@ -188,9 +188,9 @@ spec:
               kubectl scale statefulset {{ include "ai-platform.fullname" . }}-redis -n $NAMESPACE --replicas=1 || true
               echo "  ✓ Redis scaled to 1"
               {{- end }}
-              {{- if and .Values.simpleServices.weaviate .Values.simpleServices.weaviate.enabled }}
-              kubectl scale statefulset {{ include "ai-platform.fullname" . }}-weaviate -n $NAMESPACE --replicas=1 || true
-              echo "  ✓ Weaviate scaled to 1"
+              {{- if and .Values.simpleServices.qdrant .Values.simpleServices.qdrant.enabled }}
+              kubectl scale statefulset {{ include "ai-platform.fullname" . }}-qdrant -n $NAMESPACE --replicas=1 || true
+              echo "  ✓ Qdrant scaled to 1"
               {{- end }}
               
               # Scale up Deployments (KEDA will handle these, but we do it explicitly for safety)

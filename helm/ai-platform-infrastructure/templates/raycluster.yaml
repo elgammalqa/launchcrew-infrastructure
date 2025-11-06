@@ -53,8 +53,8 @@ spec:
             value: "nats://nats.{{ .Values.global.namespace }}.svc.cluster.local:4222"
           - name: RABBITMQ_URL
             value: "amqp://rabbitmq.{{ .Values.global.namespace }}.svc.cluster.local:5672"
-          - name: WEAVIATE_URL
-            value: "http://weaviate.{{ .Values.global.namespace }}.svc.cluster.local:8080"
+          - name: QDRANT_URL
+            value: "http://qdrant.{{ .Values.global.namespace }}.svc.cluster.local:6333"
           - name: CLICKHOUSE_URL
             value: "http://clickhouse.{{ .Values.global.namespace }}.svc.cluster.local:8123"
           - name: INFLUXDB_URL
@@ -116,8 +116,8 @@ spec:
             value: "nats://nats.{{ .Values.global.namespace }}.svc.cluster.local:4222"
           - name: RABBITMQ_URL
             value: "amqp://rabbitmq.{{ .Values.global.namespace }}.svc.cluster.local:5672"
-          - name: WEAVIATE_URL
-            value: "http://weaviate.{{ .Values.global.namespace }}.svc.cluster.local:8080"
+          - name: QDRANT_URL
+            value: "http://qdrant.{{ .Values.global.namespace }}.svc.cluster.local:6333"
           - name: CLICKHOUSE_URL
             value: "http://clickhouse.{{ .Values.global.namespace }}.svc.cluster.local:8123"
           - name: INFLUXDB_URL

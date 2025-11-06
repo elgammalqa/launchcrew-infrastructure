@@ -42,7 +42,7 @@ echo ""
 echo "📦 Step 2: Adding Helm repositories..."
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo add nats https://nats-io.github.io/k8s/helm/charts/
-helm repo add weaviate https://weaviate.github.io/weaviate-helm
+# Qdrant uses official Docker images, no Helm repo needed
 helm repo add influxdata https://helm.influxdata.com/
 helm repo add kuberay https://ray-project.github.io/kuberay-helm/
 helm repo update
@@ -108,7 +108,7 @@ check_service_health "redis" "6379"
 check_service_health "rabbitmq" "5672"
 check_service_health "nats" "4222"
 check_service_health "clickhouse" "8123"
-check_service_health "weaviate" "8080"
+check_service_health "qdrant" "6333"
 check_service_health "influxdb" "8086"
 check_service_health "registry" "5000"
 
@@ -144,7 +144,7 @@ echo "   Redis:         kubectl port-forward -n $NAMESPACE svc/redis 6379:6379"
 echo "   RabbitMQ Mgmt: kubectl port-forward -n $NAMESPACE svc/rabbitmq 15672:15672"
 echo "   NATS:          kubectl port-forward -n $NAMESPACE svc/nats 4222:4222"
 echo "   ClickHouse:    kubectl port-forward -n $NAMESPACE svc/clickhouse 8123:8123"
-echo "   Weaviate:      kubectl port-forward -n $NAMESPACE svc/weaviate 8080:8080"
+echo "   Qdrant:        kubectl port-forward -n $NAMESPACE svc/qdrant 6333:6333"
 echo "   InfluxDB:      kubectl port-forward -n $NAMESPACE svc/influxdb 8086:8086"
 echo "   Registry:      kubectl port-forward -n $NAMESPACE svc/registry 5000:5000"
 echo "   Ray Dashboard: kubectl port-forward -n $NAMESPACE svc/ray-cluster-dev-head-svc 8265:8265"

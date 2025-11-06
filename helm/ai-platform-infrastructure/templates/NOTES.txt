@@ -16,8 +16,8 @@
 {{- if .Values.clickhouse.enabled }}
 ✅ ClickHouse - Analytics database
 {{- end }}
-{{- if .Values.weaviate.enabled }}
-✅ Weaviate - Vector database
+{{- if .Values.qdrant.enabled }}
+✅ Qdrant - Vector database
 {{- end }}
 {{- if .Values.influxdb2.enabled }}
 ✅ InfluxDB - Time series database

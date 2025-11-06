@@ -1,0 +1,301 @@
+{{- if .Values.celery.worker.enabled }}
+# Celery Worker Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-celery-worker
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+spec:
+  replicas: {{ .Values.celery.worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-worker
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: celery-worker
+        app: celery-worker
+    spec:
+      containers:
+      - name: celery-worker
+        image: "{{ .Values.celery.worker.image.repository }}:{{ .Values.celery.worker.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        workingDir: {{ .Values.celery.worker.workingDir }}
+        command: ["celery"]
+        args: ["-A", "src.core.infrastructure.queue.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+        env:
+        {{- range $key, $value := .Values.celery.worker.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- if .Values.celery.worker.envFrom }}
+        envFrom:
+        {{- toYaml .Values.celery.worker.envFrom | nindent 8 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.celery.worker.resources | nindent 10 }}
+        {{- if .Values.celery.worker.livenessProbe.enabled }}
+        livenessProbe:
+          exec:
+            command:
+            - celery
+            - -A
+            - src.core.infrastructure.queue.celery_app:celery_app
+            - inspect
+            - ping
+          initialDelaySeconds: {{ .Values.celery.worker.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.celery.worker.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.celery.worker.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.celery.worker.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.celery.worker.readinessProbe.enabled }}
+        readinessProbe:
+          exec:
+            command:
+            - celery
+            - -A
+            - src.core.infrastructure.queue.celery_app:celery_app
+            - inspect
+            - ping
+          initialDelaySeconds: {{ .Values.celery.worker.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.celery.worker.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.celery.worker.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.celery.worker.readinessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.celery.worker.volumeMounts }}
+        volumeMounts:
+        {{- toYaml .Values.celery.worker.volumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.celery.worker.volumes }}
+      volumes:
+      {{- toYaml .Values.celery.worker.volumes | nindent 6 }}
+      {{- end }}
+      {{- with .Values.celery.worker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celery.worker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celery.worker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+---
+# Celery Worker Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-celery-worker
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+spec:
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+  ports:
+  - name: monitoring
+    port: 5555
+    targetPort: 5555
+    protocol: TCP
+  type: ClusterIP
+{{- end }}
+
+{{- if .Values.celery.beat.enabled }}
+---
+# Celery Beat Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-celery-beat
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-beat
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: celery-beat
+        app: celery-beat
+    spec:
+      containers:
+      - name: celery-beat
+        image: "{{ .Values.celery.beat.image.repository }}:{{ .Values.celery.beat.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        workingDir: {{ .Values.celery.beat.workingDir }}
+        command:
+        - celery
+        - -A
+        - {{ .Values.celery.app }}
+        - beat
+        - --loglevel=info
+        - --schedule=/tmp/celerybeat-schedule
+        - --pidfile=/tmp/celerybeat.pid
+        env:
+        {{- range $key, $value := .Values.celery.beat.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- if .Values.celery.beat.envFrom }}
+        envFrom:
+        {{- toYaml .Values.celery.beat.envFrom | nindent 8 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.celery.beat.resources | nindent 10 }}
+        volumeMounts:
+        - name: celery-beat-data
+          mountPath: /tmp
+        {{- if .Values.celery.beat.volumeMounts }}
+        {{- toYaml .Values.celery.beat.volumeMounts | nindent 8 }}
+        {{- end }}
+      volumes:
+      - name: celery-beat-data
+        emptyDir: {}
+      {{- if .Values.celery.beat.volumes }}
+      {{- toYaml .Values.celery.beat.volumes | nindent 6 }}
+      {{- end }}
+      {{- with .Values.celery.beat.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celery.beat.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celery.beat.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+{{- if .Values.celery.flower.enabled }}
+---
+# Celery Flower Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-celery-flower
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-flower
+spec:
+  replicas: {{ .Values.celery.flower.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ai-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-flower
+  template:
+    metadata:
+      labels:
+        {{- include "ai-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: celery-flower
+        app: celery-flower
+    spec:
+      containers:
+      - name: celery-flower
+        image: "{{ .Values.celery.flower.image.repository }}:{{ .Values.celery.flower.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.celery.flower.port }}
+          protocol: TCP
+        env:
+        - name: CELERY_BROKER_URL
+          value: {{ .Values.celery.brokerUrl | quote }}
+        {{- range $key, $value := .Values.celery.flower.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- if .Values.celery.flower.envFrom }}
+        envFrom:
+        {{- toYaml .Values.celery.flower.envFrom | nindent 8 }}
+        {{- end }}
+        {{- if .Values.celery.flower.command }}
+        command:
+        {{- toYaml .Values.celery.flower.command | nindent 8 }}
+        {{- end }}
+        {{- if .Values.celery.flower.args }}
+        args:
+        {{- toYaml .Values.celery.flower.args | nindent 8 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.celery.flower.resources | nindent 10 }}
+        {{- if .Values.celery.flower.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: {{ .Values.celery.flower.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.celery.flower.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.celery.flower.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.celery.flower.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.celery.flower.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: {{ .Values.celery.flower.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.celery.flower.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.celery.flower.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.celery.flower.readinessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.celery.flower.volumeMounts }}
+        volumeMounts:
+        {{- toYaml .Values.celery.flower.volumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.celery.flower.volumes }}
+      volumes:
+      {{- toYaml .Values.celery.flower.volumes | nindent 6 }}
+      {{- end }}
+      {{- with .Values.celery.flower.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celery.flower.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celery.flower.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+---
+# Celery Flower Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-platform.fullname" . }}-celery-flower
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-flower
+spec:
+  selector:
+    {{- include "ai-platform.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-flower
+  ports:
+  - name: http
+    port: {{ .Values.celery.flower.service.port }}
+    targetPort: http
+    protocol: TCP
+  type: {{ .Values.celery.flower.service.type }}
+{{- end }}
