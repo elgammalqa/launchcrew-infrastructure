@@ -7,6 +7,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: redis
+    app: redis
+    app: redis
 spec:
   serviceName: redis
   replicas: 1
@@ -14,11 +16,15 @@ spec:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       component: redis
+      app: redis
+    app: redis
   template:
     metadata:
       labels:
         {{- include "ai-platform.selectorLabels" . | nindent 8 }}
         component: redis
+        app: redis
+    app: redis
     spec:
       containers:
       - name: redis
@@ -64,6 +70,8 @@ spec:
       labels:
         {{- include "ai-platform.labels" . | nindent 8 }}
         component: redis
+        app: redis
+    app: redis
     spec:
       accessModes:
         - {{ .Values.persistence.redis.accessMode }}
@@ -82,6 +90,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: redis
+    app: redis
+    app: redis
 spec:
   type: ClusterIP
   ports:
@@ -92,4 +102,6 @@ spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     component: redis
+    app: redis
+    app: redis
 {{- end }}

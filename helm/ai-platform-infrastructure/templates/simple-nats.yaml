@@ -7,6 +7,7 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: nats
+    app: nats
 spec:
   accessModes:
     - {{ .Values.persistence.nats.accessMode }}
@@ -25,17 +26,20 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: nats
+    app: nats
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       component: nats
+      app: nats
   template:
     metadata:
       labels:
         {{- include "ai-platform.selectorLabels" . | nindent 8 }}
         component: nats
+        app: nats
     spec:
       containers:
       - name: nats
@@ -85,6 +89,7 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: nats
+    app: nats
 spec:
   type: ClusterIP
   ports:
@@ -99,4 +104,5 @@ spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     component: nats
+    app: nats
 {{- end }}

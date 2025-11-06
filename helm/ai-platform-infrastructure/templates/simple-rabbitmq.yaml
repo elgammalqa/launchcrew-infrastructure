@@ -7,6 +7,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: rabbitmq
+    app: rabbitmq
+    app: rabbitmq
 spec:
   accessModes:
     - {{ .Values.persistence.rabbitmq.accessMode }}
@@ -25,17 +27,23 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: rabbitmq
+    app: rabbitmq
+    app: rabbitmq
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       component: rabbitmq
+      app: rabbitmq
+    app: rabbitmq
   template:
     metadata:
       labels:
         {{- include "ai-platform.selectorLabels" . | nindent 8 }}
         component: rabbitmq
+        app: rabbitmq
+    app: rabbitmq
     spec:
       containers:
       - name: rabbitmq
@@ -91,6 +99,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: rabbitmq
+    app: rabbitmq
+    app: rabbitmq
 spec:
   type: ClusterIP
   ports:
@@ -105,4 +115,6 @@ spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     component: rabbitmq
+    app: rabbitmq
+    app: rabbitmq
 {{- end }}

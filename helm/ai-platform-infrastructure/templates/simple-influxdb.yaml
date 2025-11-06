@@ -7,6 +7,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: influxdb
+    app: influxdb
+    app: influxdb
 spec:
   accessModes:
     - {{ .Values.persistence.influxdb.accessMode }}
@@ -25,17 +27,23 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: influxdb
+    app: influxdb
+    app: influxdb
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       component: influxdb
+      app: influxdb
+    app: influxdb
   template:
     metadata:
       labels:
         {{- include "ai-platform.selectorLabels" . | nindent 8 }}
         component: influxdb
+        app: influxdb
+    app: influxdb
     spec:
       containers:
       - name: influxdb
@@ -106,6 +114,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: influxdb
+    app: influxdb
+    app: influxdb
 spec:
   type: ClusterIP
   ports:
@@ -116,4 +126,6 @@ spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     component: influxdb
+    app: influxdb
+    app: influxdb
 {{- end }}

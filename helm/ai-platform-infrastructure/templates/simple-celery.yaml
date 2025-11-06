@@ -8,12 +8,14 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     app.kubernetes.io/component: celery-worker
+    app: celery-worker
 spec:
   replicas: {{ .Values.celery.worker.replicas }}
   selector:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: celery-worker
+      app: celery-worker
   template:
     metadata:
       labels:
@@ -98,10 +100,12 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     app.kubernetes.io/component: celery-worker
+    app: celery-worker
 spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: celery-worker
+    app: celery-worker
   ports:
   - name: monitoring
     port: 5555
@@ -121,12 +125,14 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     app.kubernetes.io/component: celery-beat
+    app: celery-beat
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: celery-beat
+      app: celery-beat
   template:
     metadata:
       labels:
@@ -195,12 +201,14 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     app.kubernetes.io/component: celery-flower
+    app: celery-flower
 spec:
   replicas: {{ .Values.celery.flower.replicas }}
   selector:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: celery-flower
+      app: celery-flower
   template:
     metadata:
       labels:
@@ -288,10 +296,12 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     app.kubernetes.io/component: celery-flower
+    app: celery-flower
 spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: celery-flower
+    app: celery-flower
   ports:
   - name: http
     port: {{ .Values.celery.flower.service.port }}

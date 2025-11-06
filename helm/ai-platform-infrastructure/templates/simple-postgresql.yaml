@@ -7,6 +7,7 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: postgresql
+    app: postgresql
 spec:
   serviceName: postgresql
   replicas: 1
@@ -14,11 +15,13 @@ spec:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       component: postgresql
+      app: postgresql
   template:
     metadata:
       labels:
         {{- include "ai-platform.selectorLabels" . | nindent 8 }}
         component: postgresql
+        app: postgresql
     spec:
       containers:
       - name: postgresql
@@ -76,6 +79,7 @@ spec:
       labels:
         {{- include "ai-platform.labels" . | nindent 8 }}
         component: postgresql
+        app: postgresql
     spec:
       accessModes:
         - {{ .Values.persistence.postgresql.accessMode }}
@@ -94,6 +98,7 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: postgresql
+    app: postgresql
 spec:
   type: ClusterIP
   ports:
@@ -104,4 +109,5 @@ spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     component: postgresql
+    app: postgresql
 {{- end }}

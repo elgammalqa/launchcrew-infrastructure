@@ -7,17 +7,20 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     app.kubernetes.io/component: qdrant
+    app: qdrant
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: qdrant
+    app: qdrant
   template:
     metadata:
       labels:
         {{- include "ai-platform.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: qdrant
+    app: qdrant
     spec:
       containers:
       - name: qdrant
@@ -69,6 +72,7 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     app.kubernetes.io/component: qdrant
+    app: qdrant
 spec:
   type: ClusterIP
   ports:
@@ -83,6 +87,7 @@ spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: qdrant
+    app: qdrant
 
 
 {{- end }}

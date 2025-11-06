@@ -7,6 +7,7 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: clickhouse
+    app: clickhouse
 data:
   config.xml: |
     <clickhouse>
@@ -76,6 +77,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: clickhouse
+    app: clickhouse
+    app: clickhouse
 spec:
   accessModes:
     - {{ .Values.persistence.clickhouse.accessMode }}
@@ -94,17 +97,23 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: clickhouse
+    app: clickhouse
+    app: clickhouse
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       component: clickhouse
+      app: clickhouse
+    app: clickhouse
   template:
     metadata:
       labels:
         {{- include "ai-platform.selectorLabels" . | nindent 8 }}
         component: clickhouse
+        app: clickhouse
+    app: clickhouse
     spec:
       containers:
       - name: clickhouse
@@ -176,6 +185,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: clickhouse
+    app: clickhouse
+    app: clickhouse
 spec:
   type: ClusterIP
   ports:
@@ -190,4 +201,6 @@ spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     component: clickhouse
+    app: clickhouse
+    app: clickhouse
 {{- end }}

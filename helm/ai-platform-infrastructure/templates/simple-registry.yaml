@@ -7,6 +7,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: registry
+    app: registry
+    app: registry
 spec:
   serviceName: registry
   replicas: 1
@@ -14,11 +16,15 @@ spec:
     matchLabels:
       {{- include "ai-platform.selectorLabels" . | nindent 6 }}
       component: registry
+      app: registry
+    app: registry
   template:
     metadata:
       labels:
         {{- include "ai-platform.selectorLabels" . | nindent 8 }}
         component: registry
+        app: registry
+    app: registry
     spec:
       containers:
       - name: registry
@@ -62,6 +68,7 @@ spec:
       labels:
         {{- include "ai-platform.labels" . | nindent 8 }}
         component: registry
+    app: registry
     spec:
       accessModes:
         - {{ .Values.persistence.registry.accessMode }}
@@ -80,6 +87,8 @@ metadata:
   labels:
     {{- include "ai-platform.labels" . | nindent 4 }}
     component: registry
+    app: registry
+    app: registry
 spec:
   type: ClusterIP
   ports:
@@ -90,4 +99,6 @@ spec:
   selector:
     {{- include "ai-platform.selectorLabels" . | nindent 4 }}
     component: registry
+    app: registry
+    app: registry
 {{- end }}
