@@ -18,13 +18,12 @@ helm uninstall $RELEASE_NAME -n $NAMESPACE 2>/dev/null || true
 # Wait for cleanup
 sleep 5
 
-# Deploy all infrastructure services including Celery and Qdrant
+# Deploy all infrastructure services including Qdrant
 echo "🔧 Deploying all infrastructure services..."
 helm install $RELEASE_NAME $CHART_PATH \
   --namespace $NAMESPACE \
   --create-namespace \
   --values values-dev.yaml \
-  --set celery.enabled=true \
   --set qdrant.enabled=true \
   --timeout 15m \
   --wait
@@ -33,13 +32,12 @@ helm install $RELEASE_NAME $CHART_PATH \
 echo "⏳ Waiting for KubeRay operator to be ready..."
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kuberay-operator -n $NAMESPACE --timeout=120s || true
 
-# Enable Ray cluster with upgrade (keeping Celery and Qdrant enabled)
+# Enable Ray cluster with upgrade (keeping Qdrant enabled)
 echo "🔧 Enabling Ray cluster..."
 helm upgrade $RELEASE_NAME $CHART_PATH \
   --namespace $NAMESPACE \
   --values values-dev.yaml \
   --set rayCluster.enabled=true \
-  --set celery.enabled=true \
   --set qdrant.enabled=true \
   --timeout 15m \
   --wait
@@ -102,20 +100,7 @@ check_service_health "clickhouse" "8123"
 # Check Qdrant
 check_service_health "qdrant" "6333"
 
-# Check Celery Workers
-echo "🔍 Checking Celery workers health..."
-if kubectl get pods -n $NAMESPACE -l app.kubernetes.io/component=celery-worker | grep -q "Running"; then
-  echo "  ✅ Celery worker pods are running"
-  
-  # Test Celery worker connectivity
-  WORKER_POD=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/component=celery-worker -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-  if [ -n "$WORKER_POD" ]; then
-    echo "  🔍 Testing Celery worker health on pod: $WORKER_POD"
-    kubectl exec -n $NAMESPACE "$WORKER_POD" -- python -c "print('Celery worker is healthy')" 2>/dev/null && echo "  ✅ Celery worker health check passed" || echo "  ⚠️  Celery worker health check failed"
-  fi
-else
-  echo "  ❌ Celery worker pods are not running"
-fi
+
 
 # Check InfluxDB
 check_service_health "influxdb" "8086"
@@ -167,7 +152,7 @@ echo "   Qdrant:      kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-q
 echo "   InfluxDB:    kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-influxdb2 8086:8086"
 echo "   Registry:    kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-registry 5000:5000"
 echo "   Ray Dashboard: kubectl port-forward -n $NAMESPACE svc/ray-cluster-dev-head-svc 8265:8265"
-echo "   Celery Monitor: kubectl port-forward -n $NAMESPACE svc/ai-platform-infra-celery-worker 5555:5555"
+echo ""
 echo ""
 echo "🐳 Docker Registry Usage:"
 echo "   Tag image:   docker tag myapp:latest localhost:5000/myapp:latest"

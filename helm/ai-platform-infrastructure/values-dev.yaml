@@ -29,8 +29,7 @@ ingress:
     host: registry.local
   ray:
     host: ray.local
-  flower:
-    host: flower.local
+
 
 # Secrets configuration for all services
 secrets:
@@ -64,8 +63,7 @@ secrets:
   registry:
     httpSecret: 'registry-dev-secret-2024'
 
-  celery:
-    flowerAuth: 'admin:flower-dev-secret-2024'
+
 
 # Disable all complex Helm chart dependencies
 postgresql:
@@ -277,15 +275,13 @@ rayCluster:
   scaleToZero: false  # Disable KEDA scaling for Ray
   name: 'ray-cluster-dev'
   
-  # Official Ray image with Python 3.11
-  image:
-    repository: 'rayproject/ray'
-    tag: '2.49.0-py311'
-    pullPolicy: 'IfNotPresent'
-  
   # Head node configuration
   head:
     numCpus: '1'
+    image:
+      repository: 'gcr.io/alien-drake-474816-a2/ai-ray-head'
+      tag: 'latest'
+      pullPolicy: 'IfNotPresent'
     resources:
       requests:
         memory: '1Gi'
@@ -300,6 +296,10 @@ rayCluster:
     minReplicas: 0
     maxReplicas: 3
     numCpus: '1'
+    image:
+      repository: 'gcr.io/alien-drake-474816-a2/ai-ray-worker'
+      tag: 'latest'
+      pullPolicy: 'IfNotPresent'
     resources:
       requests:
         memory: '1Gi'
@@ -313,146 +313,7 @@ rayCluster:
     openaiApiKey: false  # Set to true when secret is created
     anthropicApiKey: false  # Set to true when secret is created
 
-# Celery distributed task queue configuration
-celery:
-  # Broker configuration - use either 'redis' or 'rabbitmq'
-  broker: 'redis'  # Options: 'redis', 'rabbitmq'
-  brokerUrl: 'redis://:redis-dev-secret-2024@redis:6379/0'
-  resultBackend: 'redis://:redis-dev-secret-2024@redis:6379/0'
-  app: 'src.core.infrastructure.queue.celery_app'  # Full module path to Celery app
-  
-  # Celery Worker configuration
-  worker:
-    enabled: true
-    replicas: 2
-    image:
-      repository: 'gcr.io/alien-drake-474816-a2/ai-celery-worker'
-      tag: 'latest'
-    resources:
-      requests:
-        memory: '512Mi'
-        cpu: '250m'
-      limits:
-        memory: '2Gi'
-        cpu: '1000m'
-    env:
-      PYTHONPATH: '/app'
-      C_FORCE_ROOT: '1'
-      LOG_LEVEL: 'INFO'
-      DATABASE_URL: 'postgresql+asyncpg://postgres:postgres-dev-secret-2024@postgresql:5432/ai_platform_dev'
-      REDIS_URL: 'redis://:redis-dev-secret-2024@redis:6379/0'
-      NATS_URL: 'nats://nats:4222'
-      RABBITMQ_URL: 'amqp://admin:rabbitmq-dev-secret-2024@rabbitmq:5672'
-      QDRANT_URL: 'http://ai-qdrant:6333'
-      INFLUXDB_URL: 'http://influxdb:8086'
-      SKIP_DATABASE_CHECK: 'true'
-      DISABLE_STARTUP_CHECKS: 'true'
-      SKIP_DB_HEALTH_CHECK: 'true'
-    envFrom: []
-    workingDir: '/app'
-    livenessProbe:
-      enabled: true
-      initialDelaySeconds: 30
-      periodSeconds: 60
-      timeoutSeconds: 10
-      failureThreshold: 3
-    readinessProbe:
-      enabled: true
-      initialDelaySeconds: 10
-      periodSeconds: 30
-      timeoutSeconds: 10
-      failureThreshold: 3
-    volumeMounts: []
-    volumes: []
-    nodeSelector: {}
-    tolerations: []
-    affinity: {}
-    # KEDA autoscaling based on queue length
-    autoscaling:
-      enabled: false  # Disabled for dev environment
-      minReplicas: 1
-      maxReplicas: 10
-      cooldownPeriod: 300
-      queueName: 'celery'  # Default Celery queue name
-      queueLength: 5  # Scale up when queue has more than 5 tasks
-  
-  # Celery Beat (scheduler) configuration
-  beat:
-    enabled: true
-    image:
-      repository: 'gcr.io/alien-drake-474816-a2/ai-celery-worker'
-      tag: 'latest'
-    resources:
-      requests:
-        memory: '256Mi'
-        cpu: '100m'
-      limits:
-        memory: '512Mi'
-        cpu: '200m'
-    env:
-      PYTHONPATH: '/app'
-      C_FORCE_ROOT: '1'
-      LOG_LEVEL: 'INFO'
-      DATABASE_URL: 'postgresql+asyncpg://postgres:postgres-dev-secret-2024@postgresql:5432/ai_platform_dev'
-      REDIS_URL: 'redis://:redis-dev-secret-2024@redis:6379/0'
-      NATS_URL: 'nats://nats:4222'
-      RABBITMQ_URL: 'amqp://admin:rabbitmq-dev-secret-2024@rabbitmq:5672'
-      QDRANT_URL: 'http://ai-qdrant:6333'
-      INFLUXDB_URL: 'http://influxdb:8086'
-      SKIP_DATABASE_CHECK: 'true'
-      DISABLE_STARTUP_CHECKS: 'true'
-      SKIP_DB_HEALTH_CHECK: 'true'
-    envFrom: []
-    workingDir: '/app'
-    volumeMounts: []
-    volumes: []
-    nodeSelector: {}
-    tolerations: []
-    affinity: {}
-  
-  # Celery Flower (monitoring) configuration
-  flower:
-    enabled: true
-    replicas: 1
-    port: 5555
-    image:
-      repository: 'mher/flower'
-      tag: '2.0.1'
-    command: 
-      - /bin/sh
-    args: 
-      - -c
-      - 'exec celery flower --broker=${CELERY_BROKER_URL} --port=5555'
-    service:
-      type: 'ClusterIP'
-      port: 5555
-    resources:
-      requests:
-        memory: '64Mi'
-        cpu: '25m'
-      limits:
-        memory: '128Mi'
-        cpu: '50m'
-    env:
-      FLOWER_BASIC_AUTH: 'admin:flower-dev-secret-2024'
-    envFrom: []
-    livenessProbe:
-      enabled: false
-      initialDelaySeconds: 30
-      periodSeconds: 30
-      timeoutSeconds: 10
-      failureThreshold: 3
-    readinessProbe:
-      enabled: false
-      initialDelaySeconds: 15
-      periodSeconds: 15
-      timeoutSeconds: 5
-      failureThreshold: 3
-    volumeMounts: []
-    volumes: []
-    nodeSelector: {}
-    tolerations: []
-    affinity: {}
+
 
 # KEDA autoscaling configuration - DISABLED
 keda:

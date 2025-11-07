@@ -177,6 +177,3 @@ kuberay-operator:
 # Note: Ray clusters are created separately via RayCluster CRDs
 # The operator just manages the lifecycle of Ray clusters
 
-# Celery Configuration - Disabled by default, enabled in values-dev.yaml
-celery:
-  enabled: false

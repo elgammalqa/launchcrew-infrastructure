@@ -1,44 +1,85 @@
-# Cloud Build configuration for Celery Worker Docker image
+# Cloud Build configuration for Ray Head and Worker Docker images
 steps:
-  # Step 1: Build the Celery worker Docker image
+  # Step 1: Build the Ray head Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-head-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ai-ray-head:$BUILD_ID'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ai-ray-head:latest'
+      - '-f'
+      - 'docker/ray-head.dockerfile'
+      - '.'
+    timeout: '1200s'
+
+  # Step 2: Build the Ray worker Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-worker-image'
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/ai-celery-worker:$BUILD_ID'
+      - 'gcr.io/$PROJECT_ID/ai-ray-worker:$BUILD_ID'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/ai-celery-worker:latest'
+      - 'gcr.io/$PROJECT_ID/ai-ray-worker:latest'
       - '-f'
-      - 'infrastructure/docker/celery-worker-production.dockerfile'
-      - './ai-agents'
+      - 'docker/ray-worker.dockerfile'
+      - '.'
     timeout: '1200s'
 
-  # Step 2: Push the image to Container Registry
+  # Step 3: Push the head image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-head-image'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/ai-ray-head:$BUILD_ID'
+    waitFor: ['build-head-image']
+
+  # Step 4: Push the worker image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-worker-image'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/ai-celery-worker:$BUILD_ID'
+      - 'gcr.io/$PROJECT_ID/ai-ray-worker:$BUILD_ID'
     waitFor: ['build-worker-image']
 
-  # Step 3: Push the latest tag
+  # Step 5: Push the latest head tag
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-latest-tag'
+    id: 'push-head-latest-tag'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/ai-celery-worker:latest'
+      - 'gcr.io/$PROJECT_ID/ai-ray-head:latest'
+    waitFor: ['build-head-image']
+
+  # Step 6: Push the latest worker tag
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-worker-latest-tag'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/ai-ray-worker:latest'
     waitFor: ['build-worker-image']
 
-  # Step 4: Security scan the image (optional but recommended)
+  # Step 7: Security scan the images (optional but recommended)
   - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'security-scan'
+    id: 'security-scan-head'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        gcloud container images scan gcr.io/$PROJECT_ID/ai-celery-worker:$BUILD_ID \
-          --format='value(response.scan.analysisCompleted)' || echo "Security scan initiated"
+        gcloud container images scan gcr.io/$PROJECT_ID/ai-ray-head:$BUILD_ID \
+          --format='value(response.scan.analysisCompleted)' || echo "Head image security scan initiated"
+    waitFor: ['push-head-image']
+
+  # Step 8: Security scan worker image
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'security-scan-worker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud container images scan gcr.io/$PROJECT_ID/ai-ray-worker:$BUILD_ID \
+          --format='value(response.scan.analysisCompleted)' || echo "Worker image security scan initiated"
     waitFor: ['push-worker-image']
 
   # Step 5: Deploy Complete AI Platform Infrastructure using Helm
@@ -53,7 +94,7 @@ steps:
         
         # Deploy complete AI platform infrastructure including Celery workers
         helm upgrade --install ai-platform-infrastructure \
-          ./infrastructure/helm/ai-platform-infrastructure \
+          ./helm/ai-platform-infrastructure \
           --namespace $_NAMESPACE \
           --create-namespace \
           --set celery.worker.image.tag=$BUILD_ID \
@@ -92,11 +133,11 @@ steps:
           curl -f http://ai-platform-infrastructure-qdrant.$_NAMESPACE:6333/ || echo "Qdrant connectivity test completed"
         
         # Test Celery worker health
-        WORKER_POD=$(kubectl get pods -n $_NAMESPACE -l app.kubernetes.io/component=celery-worker -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-        if [ -n "$WORKER_POD" ]; then
-          echo "Testing Celery worker health on pod: $WORKER_POD"
-          kubectl wait --for=condition=Ready pod/"$WORKER_POD" -n $_NAMESPACE --timeout=120s
-          kubectl exec -n $_NAMESPACE "$WORKER_POD" -- python -c "print('Celery worker is healthy')" || echo "Celery worker health check completed"
+        WORKER_POD=$$(kubectl get pods -n $_NAMESPACE -l app.kubernetes.io/component=celery-worker -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -n "$$WORKER_POD" ]; then
+          echo "Testing Celery worker health on pod: $$WORKER_POD"
+          kubectl wait --for=condition=Ready pod/"$$WORKER_POD" -n $_NAMESPACE --timeout=120s
+          kubectl exec -n $_NAMESPACE "$$WORKER_POD" -- python -c "print('Celery worker is healthy')" || echo "Celery worker health check completed"
         fi
         
         echo "✅ Complete AI Platform Infrastructure deployment successful!"

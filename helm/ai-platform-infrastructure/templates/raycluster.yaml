@@ -25,8 +25,8 @@ spec:
       spec:
         containers:
         - name: ray-head
-          image: {{ .Values.rayCluster.image.repository }}:{{ .Values.rayCluster.image.tag }}
-          imagePullPolicy: {{ .Values.rayCluster.image.pullPolicy }}
+          image: {{ .Values.rayCluster.head.image.repository }}:{{ .Values.rayCluster.head.image.tag }}
+          imagePullPolicy: {{ .Values.rayCluster.head.image.pullPolicy }}
           ports:
           - containerPort: 10001
             name: client
@@ -95,8 +95,8 @@ spec:
       spec:
         containers:
         - name: ray-worker
-          image: {{ .Values.rayCluster.image.repository }}:{{ .Values.rayCluster.image.tag }}
-          imagePullPolicy: {{ .Values.rayCluster.image.pullPolicy }}
+          image: {{ .Values.rayCluster.worker.image.repository }}:{{ .Values.rayCluster.worker.image.tag }}
+          imagePullPolicy: {{ .Values.rayCluster.worker.image.pullPolicy }}
           resources:
             {{- toYaml .Values.rayCluster.worker.resources | nindent 12 }}
           env:

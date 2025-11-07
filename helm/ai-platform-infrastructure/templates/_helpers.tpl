@@ -50,16 +50,7 @@ app.kubernetes.io/name: {{ include "ai-platform.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "ai-platform-infrastructure.serviceAccountName" -}}
-{{- if .Values.celery.serviceAccount.create }}
-{{- default (include "ai-platform-infrastructure.fullname" .) .Values.celery.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.celery.serviceAccount.name }}
-{{- end }}
-{{- end }}
+
 
 {{/*
 AI Platform Infrastructure name
