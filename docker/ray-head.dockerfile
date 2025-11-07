@@ -1,7 +1,7 @@
 # Ray Head Node Dockerfile for AI Platform
 # Multi-stage build for Ray head node with dashboard and cluster management
 
-FROM python:3.11-slim as base
+FROM python:3.12.8-slim as base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -30,7 +30,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Install additional dashboard and monitoring dependencies for head node
 RUN pip install --no-cache-dir \
-    ray[dashboard]==2.49.0 \
+    ray[dashboard]==2.50.0 \
     psutil==5.9.6
 
 FROM dependencies as application

@@ -1,7 +1,7 @@
 # Ray Worker Dockerfile for AI Platform
 # Multi-stage build for optimized Ray worker containers with AI dependencies
 
-FROM python:3.11-slim as base
+FROM python:3.12.8-slim as base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
