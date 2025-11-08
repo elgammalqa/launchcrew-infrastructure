@@ -277,36 +277,36 @@ rayCluster:
   
   # Head node configuration
   head:
-    numCpus: '1'
+    numCpus: '2'
     image:
       repository: 'gcr.io/alien-drake-474816-a2/ai-ray-head'
-      tag: 'latest'
-      pullPolicy: 'IfNotPresent'
+      tag: '73dc592d-4824-43b6-bf08-301eb8776e0f'
+      pullPolicy: 'Always'
     resources:
       requests:
-        memory: '1Gi'
-        cpu: '500m'
-      limits:
         memory: '2Gi'
         cpu: '1'
+      limits:
+        memory: '4Gi'
+        cpu: '2'
   
   # Worker nodes configuration
   worker:
-    replicas: 1
-    minReplicas: 0
-    maxReplicas: 3
-    numCpus: '1'
+    replicas: 2
+    minReplicas: 1
+    maxReplicas: 5
+    numCpus: '2'
     image:
       repository: 'gcr.io/alien-drake-474816-a2/ai-ray-worker'
-      tag: 'latest'
-      pullPolicy: 'IfNotPresent'
+      tag: '73dc592d-4824-43b6-bf08-301eb8776e0f'
+      pullPolicy: 'Always'
     resources:
       requests:
-        memory: '1Gi'
-        cpu: '500m'
-      limits:
         memory: '2Gi'
         cpu: '1'
+      limits:
+        memory: '4Gi'
+        cpu: '2'
   
   # Environment variables for AI providers (optional)
   env:

@@ -35,11 +35,37 @@ spec:
             name: gcs
           - containerPort: 8265
             name: dashboard
+          - containerPort: 8080
+            name: metrics
           resources:
             {{- toYaml .Values.rayCluster.head.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/gcs_healthz
+              port: 8265
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/gcs_healthz
+              port: 8265
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /api/gcs_healthz
+              port: 8265
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 18
           env:
           - name: PYTHONPATH
-            value: "/app"
+            value: "/app/src:/app"
           - name: DATABASE_URL
             valueFrom:
               secretKeyRef:
@@ -79,9 +105,34 @@ spec:
           volumeMounts:
           - name: log-volume
             mountPath: /tmp/ray
+          - name: shared-mem
+            mountPath: /dev/shm
         volumes:
         - name: log-volume
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: 2Gi
+        - name: shared-mem
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+        nodeSelector:
+          kubernetes.io/arch: amd64
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values:
+                    - cluster
+                topologyKey: kubernetes.io/hostname
   
   # Worker nodes configuration
   workerGroupSpecs:
@@ -99,11 +150,72 @@ spec:
         - name: ray-worker
           image: {{ .Values.rayCluster.worker.image.repository }}:{{ .Values.rayCluster.worker.image.tag }}
           imagePullPolicy: {{ .Values.rayCluster.worker.image.pullPolicy }}
+          ports:
+          - containerPort: 6379
+            name: gcs-server
+          - containerPort: 8000
+            name: serve
+          - containerPort: 10001
+            name: client
           resources:
             {{- toYaml .Values.rayCluster.worker.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+              - python
+              - -c
+              - |
+                import ray
+                try:
+                    ray.init("ray://ray-cluster-dev-head-svc.{{ .Values.global.namespace }}.svc.cluster.local:10001", ignore_reinit_error=True)
+                    print("Ray worker healthy")
+                    ray.shutdown()
+                except Exception as e:
+                    print(f"Ray worker unhealthy: {e}")
+                    exit(1)
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+              - python
+              - -c
+              - |
+                import ray
+                try:
+                    ray.init("ray://ray-cluster-dev-head-svc.{{ .Values.global.namespace }}.svc.cluster.local:10001", ignore_reinit_error=True)
+                    print("Ray worker ready")
+                    ray.shutdown()
+                except Exception as e:
+                    print(f"Ray worker not ready: {e}")
+                    exit(1)
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            exec:
+              command:
+              - python
+              - -c
+              - |
+                import ray
+                try:
+                    ray.init("ray://ray-cluster-dev-head-svc.{{ .Values.global.namespace }}.svc.cluster.local:10001", ignore_reinit_error=True)
+                    print("Ray worker starting")
+                    ray.shutdown()
+                except Exception as e:
+                    print(f"Ray worker startup check: {e}")
+                    exit(1)
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           env:
           - name: PYTHONPATH
-            value: "/app"
+            value: "/app/src:/app"
           - name: DATABASE_URL
             valueFrom:
               secretKeyRef:
@@ -143,7 +255,32 @@ spec:
           volumeMounts:
           - name: log-volume
             mountPath: /tmp/ray
+          - name: shared-mem
+            mountPath: /dev/shm
         volumes:
         - name: log-volume
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: shared-mem
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+        nodeSelector:
+          kubernetes.io/arch: amd64
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values:
+                    - worker
+                topologyKey: kubernetes.io/hostname
 {{- end }}
