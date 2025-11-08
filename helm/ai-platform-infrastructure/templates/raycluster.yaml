@@ -23,6 +23,7 @@ spec:
       block: 'true'
     template:
       spec:
+        serviceAccountName: ray-serviceaccount
         containers:
         - name: ray-head
           image: {{ .Values.rayCluster.head.image.repository }}:{{ .Values.rayCluster.head.image.tag }}
@@ -93,6 +94,7 @@ spec:
       block: 'true'
     template:
       spec:
+        serviceAccountName: ray-serviceaccount
         containers:
         - name: ray-worker
           image: {{ .Values.rayCluster.worker.image.repository }}:{{ .Values.rayCluster.worker.image.tag }}
