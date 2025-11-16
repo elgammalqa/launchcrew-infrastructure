@@ -7,7 +7,7 @@ This is the Helm chart repository for launchcrew-infrastructure.
 Add this repository to Helm:
 
 ```bash
-helm repo add launchcrew-infrastructure https://elgammalqa.github.io/launchcrew-infrastructure
+helm repo add launchcrew-infrastructure https://flwcrecom.github.io/launchcrew-infrastructure
 helm repo update
 ```
 
@@ -22,4 +22,4 @@ helm install my-release launchcrew-infrastructure/<chart-name>
 ```
 
 ---
-*Last updated: Sat Nov 15 15:26:35 CST 2025*
+*Last updated: Sun Nov 16 09:31:57 CST 2025*
