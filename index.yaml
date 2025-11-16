@@ -3,7 +3,7 @@ entries:
   ai-platform:
   - apiVersion: v2
     appVersion: "1.0"
-    created: "2025-11-16T09:31:57.179481-06:00"
+    created: "2025-11-16T09:43:44.57279-06:00"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -35,7 +35,7 @@ entries:
       repository: https://ray-project.github.io/kuberay-helm/
       version: 1.4.2
     description: AI Platform Infrastructure Components
-    digest: e799cced1f01c0a7c9cc2fe060b7936c29c0556c7ca1480107f4e54691cecf05
+    digest: 726ce0f8bb291bdcd7e0acbf16d50bde69f81fe7cb32a8cb6062ce13058ed62f
     keywords:
     - infrastructure
     - database
@@ -53,4 +53,4 @@ entries:
     urls:
     - https://flwcrecom.github.io/launchcrew-infrastructure/ai-platform-0.1.1.tgz
     version: 0.1.1
-generated: "2025-11-16T09:31:57.154826-06:00"
+generated: "2025-11-16T09:43:44.551639-06:00"
