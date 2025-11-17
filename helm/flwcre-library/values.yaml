@@ -1,0 +1,181 @@
+# Default values schema for FlwCre microservices
+# This file defines the structure and defaults that services can override
+
+# Global configuration
+global:
+  registry: ghcr.io/flwcrecom
+  environment: dev
+  domain: flwcre.com
+  
+# Service configuration
+service:
+  name: ""  # Will be set by individual charts
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+  annotations: {}
+  labels: {}
+
+# Image configuration
+image:
+  repository: ""  # Will be set by individual charts
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets:
+  - name: ghcr-secret
+
+# Deployment configuration
+replicaCount: 1
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Resource configuration
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Auto-scaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Health check configuration
+healthChecks:
+  liveness:
+    enabled: true
+    path: /health
+    port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    path: /ready
+    port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startup:
+    enabled: false
+    path: /health
+    port: http
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 30
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts: []
+  tls: []
+
+# Environment variables
+env: []
+envFrom: []
+
+# Secrets and ConfigMaps
+secrets: {}
+configMap: {}
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+  automountServiceAccountToken: true
+
+# Pod configuration
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Node selection
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Database migration
+dbMigration:
+  enabled: false
+  image: ""  # Will use main service image if not specified
+  command: []
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  env: []
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Service dependencies
+serviceDependencies:
+  postgres:
+    enabled: false
+    host: "postgres.ai-platform-infra"
+    port: 5432
+    database: ""
+  redis:
+    enabled: false
+    host: "redis.ai-platform-infra"
+    port: 6379
+  nats:
+    enabled: false
+    host: "nats.ai-platform-infra"
+    port: 4222
+
+# Monitoring
+monitoring:
+  enabled: false
+  metricsPath: /metrics
+  interval: 30s
+  scrapeTimeout: 10s
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Network Policy
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress: []
