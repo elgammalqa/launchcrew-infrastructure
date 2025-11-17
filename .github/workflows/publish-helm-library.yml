@@ -74,10 +74,10 @@ jobs:
       - name: Push chart to OCI registry
         run: |
           helm push ./charts/${{ env.CHART_NAME }}-${{ steps.version.outputs.version }}.tgz \
-            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/helm-charts
+            oci://${{ env.REGISTRY }}/flwcrecom/helm-charts
 
       - name: Verify chart push
         run: |
-          helm pull oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/helm-charts/${{ env.CHART_NAME }} \
+          helm pull oci://${{ env.REGISTRY }}/flwcrecom/helm-charts/${{ env.CHART_NAME }} \
             --version ${{ steps.version.outputs.version }}
           echo "✅ Chart successfully published and verified"
